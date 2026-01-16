@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Prototype IKEA — Comptages (PDF import)</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body { margin: 0; background: #0b0f14; color: #e9eef5; }
+    header { padding: 18px 20px; border-bottom: 1px solid #1f2a37; background: #0b0f14; position: sticky; top: 0; }
+    h1 { margin: 0; font-size: 18px; }
+    main { padding: 18px 20px; max-width: 1200px; margin: 0 auto; }
+    .card { background: #0f1722; border: 1px solid #1f2a37; border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+    .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    label { font-size: 14px; opacity: .95; }
+    input[type="file"] { padding: 8px; background: #0b1220; border: 1px solid #263244; border-radius: 10px; color: #e9eef5; }
+    input[type="text"], select { padding: 8px 10px; background: #0b1220; border: 1px solid #263244; border-radius: 10px; color: #e9eef5; }
+    button { padding: 10px 12px; border-radius: 10px; border: 1px solid #2a3a52; background: #162235; color: #e9eef5; cursor: pointer; }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    .pill { display: inline-flex; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid #263244; border-radius: 999px; background: #0b1220; }
+    .muted { opacity: .75; }
+    .good { color: #64f39a; }
+    .warn { color: #ffd166; }
+    .bad { color: #ff6b6b; }
+    progress { width: 100%; height: 12px; border-radius: 999px; }
+    .grid { display: grid; grid-template-columns: repeat(5, minmax(160px,1fr)); gap: 10px; }
+    .kpi { background: #0b1220; border: 1px solid #263244; border-radius: 12px; padding: 10px; }
+    .kpi .v { font-size: 22px; font-weight: 700; margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #1f2a37; padding: 10px 8px; vertical-align: top; }
+    th { text-align: left; font-size: 12px; opacity: .8; }
+    td { font-size: 13px; }
+    .nowrap { white-space: nowrap; }
+    .small { font-size: 12px; }
+    .tag { font-size: 11px; padding: 3px 8px; border-radius: 999px; border: 1px solid #263244; background:#0b1220; display:inline-block; }
+    .right { text-align: right; }
+    .flexend { margin-left:auto; display:flex; gap:10px; align-items:center; }
+  </style>
+
+  <!-- PDF.js (CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.js"></script>
+  <!-- Tesseract.js (OCR, CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</head>
+
+<body>
+<header>
+  <h1>Prototype IKEA — Comptages depuis PDF (D31/D32/D33/D34 + D47)</h1>
+</header>
+
+<main>
+  <div class="card">
+    <div class="row">
+      <label class="pill">
+        <span>PDF IKEA :</span>
+        <input id="pdfFile" type="file" accept="application/pdf" />
+      </label>
+
+      <label class="pill">
+        <input id="useOCR" type="checkbox" checked />
+        <span>Utiliser OCR (recommandé si le PDF est une image)</span>
+      </label>
+
+      <label class="pill">
+        <span>Langue OCR :</span>
+        <select id="ocrLang">
+          <option value="fra" selected>Français (fra)</option>
+          <option value="eng">Anglais (eng)</option>
+        </select>
+      </label>
+
+      <label class="pill">
+        <span>Pages OCR :</span>
+        <input id="pageRange" type="text" placeholder="ex: 1-35 ou 20-30" value="1-35" style="width: 170px;" />
+      </label>
+
+      <div class="flexend">
+        <button id="btnAnalyze" disabled>Analyser</button>
+        <button id="btnStop" disabled>Stop</button>
+      </div>
+    </div>
+
+    <div style="margin-top:10px;">
+      <div class="row">
+        <span class="muted small">Astuce : commence par une plage type <b>20-35</b> si tu veux aller vite, puis élargis si besoin.</span>
+      </div>
+      <progress id="prog" value="0" max="1" style="margin-top:10px;"></progress>
+      <div id="status" class="small muted" style="margin-top:6px;">Prêt.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between;">
+      <div>
+        <div class="muted small">Sortie attendue par IKEA (onglet <b>INSTALLATION METOD complete</b>)</div>
+      </div>
+      <div class="row">
+        <button id="btnCopy" disabled>Copier valeurs (D31/D32/D33/D34/D47)</button>
+        <button id="btnExportJson" disabled>Exporter JSON</button>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:10px;">
+      <div class="kpi"><div class="muted small">D31 — Nb meubles hauts</div><div class="v" id="kH">0</div><div class="small muted">hors surmeubles frigo</div></div>
+      <div class="kpi"><div class="muted small">D32 — Nb meubles bas</div><div class="v" id="kB">0</div></div>
+      <div class="kpi"><div class="muted small">D33 — Nb meubles îlot</div><div class="v" id="kI">0</div><div class="small muted">péninsule = îlot</div></div>
+      <div class="kpi"><div class="muted small">D34 — Nb colonnes</div><div class="v" id="kC">0</div></div>
+      <div class="kpi"><div class="muted small">D47 — Nb appareils</div><div class="v" id="kE">0</div></div>
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <span class="tag">Info</span>
+      <span class="small muted">Surmeubles frigo détectés (exclus des hauts) : <b id="kOver">0</b></span>
+      <span class="small muted">Lignes analysées : <b id="kLines">0</b></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between;">
+      <div>
+        <div style="font-weight:600;">Détail détecté (corrige si besoin)</div>
+        <div class="small muted">Tu peux reclasser une ligne (Haut/Bas/Îlot/Colonne/Électro/Ignore). Les totaux se mettent à jour.</div>
+      </div>
+      <button id="btnRecalc" disabled>Recalculer</button>
+    </div>
+
+    <div style="overflow:auto; margin-top:10px;">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th class="nowrap">Qté</th>
+            <th>Libellé (extrait)</th>
+            <th class="nowrap">Catégorie</th>
+            <th>Raison (heuristique)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+  // --------- Config PDF.js worker ----------
+    const pdfjsLib = window.pdfjsLib;
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.js';
+
+  // --------- UI refs ----------
+  const elFile = document.getElementById('pdfFile');
+  const elOCR = document.getElementById('useOCR');
+  const elLang = document.getElementById('ocrLang');
+  const elRange = document.getElementById('pageRange');
+  const btnAnalyze = document.getElementById('btnAnalyze');
+  const btnStop = document.getElementById('btnStop');
+  const btnCopy = document.getElementById('btnCopy');
+  const btnExportJson = document.getElementById('btnExportJson');
+  const btnRecalc = document.getElementById('btnRecalc');
+  const prog = document.getElementById('prog');
+  const status = document.getElementById('status');
+  const tbody = document.querySelector('#tbl tbody');
+
+  const kH = document.getElementById('kH');
+  const kB = document.getElementById('kB');
+  const kI = document.getElementById('kI');
+  const kC = document.getElementById('kC');
+  const kE = document.getElementById('kE');
+  const kOver = document.getElementById('kOver');
+  const kLines = document.getElementById('kLines');
+
+  let STOP = false;
+  let items = []; // {qty, line, cat, reason}
+
+  elFile.addEventListener('change', () => {
+    btnAnalyze.disabled = !elFile.files?.length;
+  });
+
+  btnStop.addEventListener('click', () => {
+    STOP = true;
+    btnStop.disabled = true;
+    status.textContent = "Stop demandé…";
+  });
+
+  btnAnalyze.addEventListener('click', async () => {
+    STOP = false;
+    items = [];
+    tbody.innerHTML = "";
+    btnAnalyze.disabled = true;
+    btnStop.disabled = false;
+    btnCopy.disabled = true;
+    btnExportJson.disabled = true;
+    btnRecalc.disabled = true;
+    prog.value = 0;
+    status.textContent = "Chargement du PDF…";
+
+    try {
+      const file = elFile.files[0];
+      const data = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data }).promise;
+
+      const pages = parsePageRange(elRange.value, pdf.numPages);
+      status.textContent = `PDF chargé (${pdf.numPages} pages). Analyse pages: ${formatPages(pages)}.`;
+
+      let worker = null;
+      if (elOCR.checked) {
+        status.textContent = "Initialisation OCR…";
+        worker = await Tesseract.createWorker(elLang.value, 1, {
+          logger: m => {
+            if (m.status === "recognizing text") {
+              status.textContent = `OCR… ${(m.progress * 100).toFixed(0)}%`;
+            }
+          }
+        });
+      }
+
+      let allText = "";
+      for (let idx = 0; idx < pages.length; idx++) {
+        if (STOP) break;
+        const pno = pages[idx];
+        prog.value = (idx) / pages.length;
+
+        const page = await pdf.getPage(pno);
+
+        if (!elOCR.checked) {
+          // Text extraction (rapide si le PDF contient du texte)
+          status.textContent = `Extraction texte page ${pno}/${pdf.numPages}…`;
+          const tc = await page.getTextContent();
+          const pageText = tc.items.map(it => it.str).join("\n");
+          allText += "\n" + pageText;
+        } else {
+          // OCR (utile si le PDF est une image)
+          status.textContent = `Rendu page ${pno}/${pdf.numPages} pour OCR…`;
+          const viewport = page.getViewport({ scale: 2.0 });
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d", { willReadFrequently: true });
+          canvas.width = Math.floor(viewport.width);
+          canvas.height = Math.floor(viewport.height);
+
+          await page.render({ canvasContext: ctx, viewport }).promise;
+
+          status.textContent = `OCR page ${pno}/${pdf.numPages}…`;
+          const { data: { text } } = await worker.recognize(canvas);
+          allText += "\n" + text;
+        }
+      }
+
+      prog.value = 1;
+
+      if (worker) await worker.terminate();
+
+      if (STOP) {
+        status.textContent = "Analyse interrompue.";
+        btnAnalyze.disabled = false;
+        return;
+      }
+
+      status.textContent = "Parsing des lignes…";
+      items = parseLinesToItems(allText);
+
+      renderTable(items);
+      recalcKpis();
+
+      btnCopy.disabled = false;
+      btnExportJson.disabled = false;
+      btnRecalc.disabled = false;
+      status.textContent = "Terminé ✅ (tu peux corriger des catégories si besoin).";
+    } catch (err) {
+      console.error(err);
+      status.textContent = "Erreur: " + (err?.message || String(err));
+    } finally {
+      btnAnalyze.disabled = !elFile.files?.length;
+      btnStop.disabled = true;
+    }
+  });
+
+  btnRecalc.addEventListener('click', () => recalcKpis());
+
+  btnCopy.addEventListener('click', async () => {
+    const out = [
+      `D31 (Nb hauts): ${kH.textContent}`,
+      `D32 (Nb bas): ${kB.textContent}`,
+      `D33 (Nb îlot): ${kI.textContent}`,
+      `D34 (Nb colonnes): ${kC.textContent}`,
+      `D47 (Nb électro): ${kE.textContent}`,
+    ].join("\n");
+    await navigator.clipboard.writeText(out);
+    status.textContent = "Copié dans le presse-papiers ✅";
+  });
+
+  btnExportJson.addEventListener('click', () => {
+    const payload = {
+      computed_at: new Date().toISOString(),
+      results: {
+        D31_nb_meubles_hauts: Number(kH.textContent),
+        D32_nb_meubles_bas: Number(kB.textContent),
+        D33_nb_meubles_ilot: Number(kI.textContent),
+        D34_nb_colonnes: Number(kC.textContent),
+        D47_nb_electromenagers: Number(kE.textContent),
+        surmeubles_frigo_exclus: Number(kOver.textContent)
+      },
+      items
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "ikea_comptages.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  // ---------- Helpers ----------
+  function parsePageRange(input, maxPages) {
+    // "1-5" or "20-30" or "1,3,7-9"
+    const raw = (input || "").trim();
+    if (!raw) return Array.from({ length: maxPages }, (_, i) => i + 1);
+    const parts = raw.split(",").map(s => s.trim()).filter(Boolean);
+    const set = new Set();
+    for (const p of parts) {
+      const m = p.match(/^(\d+)\s*-\s*(\d+)$/);
+      if (m) {
+        let a = Math.max(1, Math.min(maxPages, parseInt(m[1], 10)));
+        let b = Math.max(1, Math.min(maxPages, parseInt(m[2], 10)));
+        if (a > b) [a, b] = [b, a];
+        for (let i = a; i <= b; i++) set.add(i);
+      } else if (/^\d+$/.test(p)) {
+        const n = Math.max(1, Math.min(maxPages, parseInt(p, 10)));
+        set.add(n);
+      }
+    }
+    return Array.from(set).sort((x, y) => x - y);
+  }
+
+  function formatPages(pages) {
+    if (!pages.length) return "(aucune)";
+    if (pages.length <= 10) return pages.join(", ");
+    return `${pages[0]}…${pages[pages.length - 1]} (${pages.length} pages)`;
+  }
+
+  function normalizeLine(s) {
+    // uppercase + remove accents + normalize spaces
+    const up = (s || "").toUpperCase().trim();
+    const noAcc = up.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return noAcc.replace(/\s+/g, " ").trim();
+  }
+
+  function extractQty(line) {
+    // patterns like "2x ..." or "... 2x ..." ; fallback 1
+    let m = line.match(/^(\d{1,3})\s*[xX]\s+/);
+    if (m) return { qty: parseInt(m[1], 10), rest: line.replace(m[0], "").trim() };
+    m = line.match(/\b(\d{1,3})\s*[xX]\b/);
+    if (m) return { qty: parseInt(m[1], 10), rest: line.replace(m[0], "").trim() };
+    return { qty: 1, rest: line };
+  }
+
+  function suggestCategory(rawLine) {
+    const line = normalizeLine(rawLine);
+    if (!line || line.length < 3) return { cat: "IGNORE", reason: "Ligne vide / trop courte" };
+
+    // Ignore obvious non-items
+    if (/(€|EURO|PRIX|TOTAL|SOUS[- ]TOTAL|PAGE \d+|REFERENCE|REF:|R[EÉ]F\.)/.test(line)) {
+      return { cat: "IGNORE", reason: "Prix / meta / référence" };
+    }
+
+    // Overfridge (excluded from HIGH)
+    if (/(SURMEUBLE)/.test(line) && /(FRIGO|REFRIG|CONGEL)/.test(line)) {
+      return { cat: "OVERFRIDGE", reason: "Surmeuble frigo (exclu des hauts)" };
+    }
+
+    // Tall / columns
+    if (/(CAISSON|ELEMENT|STRUCTURE)?\s*(ARMOIRE|COLONNE)\b/.test(line) || /(ELEMENT ARMOIRE|STRUCTURE ELEMENT ARMOIRE)/.test(line)) {
+      return { cat: "TALL", reason: "Armoire / colonne" };
+    }
+
+    // Wall / high
+    if (/(ELEMENT MURAL|MEUBLE MURAL|CAISSON MURAL|MEUBLE HAUT|ETAGERE MURALE)/.test(line)) {
+      return { cat: "HIGH", reason: "Meuble haut / mural" };
+    }
+
+    // VADHOLMA special (your rule: count as high when it's wall shelf)
+    if (/VADHOLMA/.test(line)) {
+      if (/(MURAL|MUR|ETAGERE)/.test(line)) {
+        return { cat: "HIGH", reason: "VADHOLMA mural ⇒ haut" };
+      }
+      return { cat: "BASE", reason: "VADHOLMA non mural ⇒ bas (à vérifier)" };
+    }
+
+    // Base cabinets
+    if (/(ELEMENT BAS|MEUBLE BAS|CAISSON BAS|TIROIR|EVIER|ANGLE BAS)/.test(line)) {
+      return { cat: "BASE", reason: "Meuble bas" };
+    }
+
+    // Island / peninsula
+    if (/(ILOT|ILOT|ÎLOT|PENINSULE|PENINSULE)/.test(line)) {
+      return { cat: "ISLAND", reason: "Îlot / péninsule ⇒ îlot" };
+    }
+
+    // Appliances
+    // Avoid counting facades/panels as appliances
+    if (/(FACADE|PANNEAU|PLINTHE|POIGNEE|CHARNIERE|AMORTISSEUR|ETAGERE|TASSEAU|PASSE-CABLE)/.test(line)) {
+      return { cat: "IGNORE", reason: "Accessoire / finition" };
+    }
+    if (/(LAVE[- ]?VAISSELLE|LV\b|FOUR\b|PLAQUE|HOTTE|FRIGO|REFRIG|CONGEL|MICRO[- ]?ONDE)/.test(line)) {
+      return { cat: "APPLIANCE", reason: "Mot-clé électroménager" };
+    }
+
+    // Unknown → keep as IGNORE but visible (you can reclass)
+    return { cat: "IGNORE", reason: "Non classé (à vérifier)" };
+  }
+
+  function parseLinesToItems(text) {
+    const rawLines = (text || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+
+    const out = [];
+    for (const rl of rawLines) {
+      const n = normalizeLine(rl);
+      if (!n) continue;
+
+      const { qty, rest } = extractQty(rl);
+      const { cat, reason } = suggestCategory(rest);
+
+      // keep everything except super-noise; we still keep IGNORE to allow reclass
+      out.push({
+        qty,
+        line: rest.trim(),
+        cat,
+        reason
+      });
+    }
+
+    // Merge identical lines + category (reduce noise)
+    const merged = new Map();
+    for (const it of out) {
+      const key = normalizeLine(it.line) + "||" + it.cat;
+      if (!merged.has(key)) merged.set(key, { ...it });
+      else merged.get(key).qty += it.qty;
+    }
+    return Array.from(merged.values()).sort((a,b) => a.cat.localeCompare(b.cat) || a.line.localeCompare(b.line));
+  }
+
+  function renderTable(items) {
+    tbody.innerHTML = "";
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      const tr = document.createElement("tr");
+
+      const tdQty = document.createElement("td");
+      tdQty.className = "nowrap right";
+      tdQty.textContent = it.qty;
+      tr.appendChild(tdQty);
+
+      const tdLine = document.createElement("td");
+      tdLine.textContent = it.line;
+      tr.appendChild(tdLine);
+
+      const tdCat = document.createElement("td");
+      tdCat.className = "nowrap";
+      const sel = document.createElement("select");
+      ["HIGH","BASE","ISLAND","TALL","APPLIANCE","OVERFRIDGE","IGNORE"].forEach(v => {
+        const o = document.createElement("option");
+        o.value = v;
+        o.textContent =
+          v === "HIGH" ? "Haut" :
+          v === "BASE" ? "Bas" :
+          v === "ISLAND" ? "Îlot" :
+          v === "TALL" ? "Colonne" :
+          v === "APPLIANCE" ? "Électro" :
+          v === "OVERFRIDGE" ? "Surmeuble frigo (exclu hauts)" :
+          "Ignore";
+        if (it.cat === v) o.selected = true;
+        sel.appendChild(o);
+      });
+      sel.addEventListener("change", () => {
+        items[i].cat = sel.value;
+        items[i].reason = "Modifié manuellement";
+        recalcKpis();
+        // update reason cell text
+        tdReason.textContent = items[i].reason;
+      });
+      tdCat.appendChild(sel);
+      tr.appendChild(tdCat);
+
+      const tdReason = document.createElement("td");
+      tdReason.className = "small muted";
+      tdReason.textContent = it.reason;
+      tr.appendChild(tdReason);
+
+      tbody.appendChild(tr);
+    }
+    kLines.textContent = String(items.length);
+  }
+
+  function recalcKpis() {
+    let nbHigh = 0, nbBase = 0, nbIsland = 0, nbTall = 0, nbApp = 0, nbOver = 0;
+    for (const it of items) {
+      const q = Number(it.qty) || 0;
+      switch (it.cat) {
+        case "HIGH": nbHigh += q; break;
+        case "BASE": nbBase += q; break;
+        case "ISLAND": nbIsland += q; break;
+        case "TALL": nbTall += q; break;
+        case "APPLIANCE": nbApp += q; break;
+        case "OVERFRIDGE": nbOver += q; break;
+      }
+    }
+
+    kH.textContent = String(nbHigh);
+    kB.textContent = String(nbBase);
+    kI.textContent = String(nbIsland);
+    kC.textContent = String(nbTall);
+    kE.textContent = String(nbApp);
+    kOver.textContent = String(nbOver);
+  }
+</script>
+</body>
+</html>
