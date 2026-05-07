@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Générateur devis cuisine IKEA - V7.09</title>
+<title>Générateur devis cuisine IKEA - V7.10</title>
 <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="shortcut icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
@@ -166,15 +166,48 @@ input[readonly]{
 .print-helper-bar .small{opacity:.85;font-size:12px}
 @media print{.print-helper-bar{display:none!important}}
 
+.header-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.auth-pill{background:#334155;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:800;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.logout-btn{background:#e2e8f0!important;color:#0f172a!important;border-radius:999px!important;padding:7px 10px!important;font-size:12px!important}
+.auth-gate{position:fixed;inset:0;z-index:999999;background:linear-gradient(135deg,#eef3fb,#f8fafc);display:flex;align-items:center;justify-content:center;padding:20px}
+.auth-card{width:min(460px,100%);background:#fff;border:1px solid #d5dce8;border-radius:22px;box-shadow:0 20px 60px rgba(15,23,42,.18);padding:22px}
+.auth-card h2{font-size:22px;margin:0 0 6px;color:#0f172a;background:transparent;border:0;padding:0}
+.auth-card p{font-size:14px;line-height:1.45;color:#475569;margin:0 0 14px}
+.auth-card label{display:block;font-size:13px;font-weight:900;color:#334155;margin:10px 0 5px}
+.auth-card input{font-size:15px;padding:11px 12px}
+.auth-card button{width:100%;margin-top:13px}
+.auth-msg{font-size:13px;font-weight:800;margin-top:10px;min-height:18px;color:#b45309}
+.auth-msg.ok{color:#166534}
+.auth-msg.err{color:#b91c1c}
+@media print{.auth-gate,.auth-pill,.logout-btn{display:none!important}}
+
+
 </style>
 </head>
 <body>
 <header class="app">
   <h1>Générateur devis cuisine IKEA</h1>
-  <span id="appVersionBadge">V7.09 | Moteur en attente</span>
+  <div class="header-actions">
+    <span id="appVersionBadge">V7.10 | Moteur en attente</span>
+    <div id="authUserLabel" class="auth-pill hidden">Non connecté</div>
+    <button id="logoutBtn" class="logout-btn hidden" type="button">Déconnexion</button>
+  </div>
 </header>
 
-<main>
+<section id="authGate" class="auth-gate">
+  <div class="auth-card">
+    <h2>Connexion requise</h2>
+    <p>Connectez-vous avec votre email autorisé pour générer un devis cuisine IKEA.</p>
+    <label for="loginEmail">Email</label>
+    <input id="loginEmail" type="email" autocomplete="username" placeholder="ex : remondjb@gmail.com">
+    <label for="loginPassword">Mot de passe</label>
+    <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Mot de passe">
+    <button id="loginBtn" type="button" class="green">Se connecter</button>
+    <div id="authMessage" class="auth-msg">Vérification de la session...</div>
+  </div>
+</section>
+
+<main id="appMain">
 <section class="card">
 <h2>1) Données</h2>
 <div class="content">
@@ -451,11 +484,94 @@ Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides inté
 </section>
 </main>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script>
-const HTML_VERSION = "V7.09";
-const DEFAULT_ENGINE_VERSION = "V4.20-cloud-api-no-ocr";
+const HTML_VERSION = "V7.10";
+const DEFAULT_ENGINE_VERSION = "V4.21-cloud-api-no-ocr";
 const CLOUD_API_ANALYZE_URL = "https://ikea-pdf-analyzer-pntpqiubqq-ew.a.run.app/analyze";
+const CLOUD_API_LICENSE_URL = CLOUD_API_ANALYZE_URL.replace(/\/analyze$/, "/license");
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB-hKccNAiciGjUeS6L-Ws3KRzYxMyU3L4",
+  authDomain: "cbat-consulting.firebaseapp.com",
+  projectId: "cbat-consulting",
+  storageBucket: "cbat-consulting.firebasestorage.app",
+  messagingSenderId: "258359623144",
+  appId: "1:258359623144:web:4e5a54a09e5ac9245a785d"
+};
+
+firebase.initializeApp(firebaseConfig);
+firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
 const $ = id => document.getElementById(id);
+let currentLicense = null;
+function setAuthMessage(message, type=""){
+  const el = $("authMessage");
+  if(!el) return;
+  el.textContent = message || "";
+  el.classList.remove("ok","err");
+  if(type) el.classList.add(type);
+}
+function showAuthGate(show){
+  const gate = $("authGate");
+  if(gate) gate.classList.toggle("hidden", !show);
+}
+function setLoggedUser(user, license){
+  const label = $("authUserLabel");
+  const logout = $("logoutBtn");
+  if(user){
+    const licenseText = license?.license_type ? ` — ${license.license_type}` : "";
+    if(label) label.textContent = `${user.email || "Connecté"}${licenseText}`;
+    label?.classList.remove("hidden");
+    logout?.classList.remove("hidden");
+  }else{
+    if(label) label.textContent = "Non connecté";
+    label?.classList.add("hidden");
+    logout?.classList.add("hidden");
+  }
+}
+async function getCurrentIdToken(forceRefresh=false){
+  const user = firebase.auth().currentUser;
+  if(!user) throw new Error("Connexion requise. Merci de vous reconnecter.");
+  return await user.getIdToken(forceRefresh);
+}
+async function refreshLicenseStatus(){
+  try{
+    const token = await getCurrentIdToken();
+    const res = await fetch(CLOUD_API_LICENSE_URL, {headers:{Authorization:`Bearer ${token}`}});
+    const data = await res.json().catch(()=>({}));
+    if(res.ok && data.ok !== false){
+      currentLicense = data.license || null;
+      setLoggedUser(firebase.auth().currentUser, currentLicense);
+      setAuthMessage("Connexion OK — licence active.", "ok");
+      return currentLicense;
+    }
+    currentLicense = null;
+    setAuthMessage(data.message || "Connexion OK, licence non vérifiée.", res.status === 404 ? "" : "err");
+    return null;
+  }catch(err){
+    currentLicense = null;
+    setAuthMessage("Connexion OK. La licence sera vérifiée au chargement du PDF.", "ok");
+    return null;
+  }
+}
+async function loginWithEmail(){
+  const email = ($("loginEmail")?.value || "").trim();
+  const password = $("loginPassword")?.value || "";
+  if(!email || !password){
+    setAuthMessage("Saisis l'email et le mot de passe.", "err");
+    return;
+  }
+  try{
+    setAuthMessage("Connexion en cours...");
+    await firebase.auth().signInWithEmailAndPassword(email, password);
+  }catch(err){
+    console.error(err);
+    setAuthMessage("Connexion impossible : vérifie l'email et le mot de passe.", "err");
+  }
+}
+
 function cleanEngineVersion(engineVersion){
   const raw = String(engineVersion || "").replace(/^Moteur\s*/i, "").trim();
   const shortMatch = raw.match(/V\d+(?:\.\d+)?/i);
@@ -685,8 +801,12 @@ async function analyzePdfCloud(file){
   fd.append("pdf", file);
 
   try{
+    const token = await getCurrentIdToken();
     const res = await fetch(CLOUD_API_ANALYZE_URL, {
       method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      },
       body: fd
     });
 
@@ -702,6 +822,10 @@ async function analyzePdfCloud(file){
       throw new Error(data.message || data.error || ("Erreur API HTTP " + res.status));
     }
 
+    if(data.license){
+      currentLicense = data.license;
+      setLoggedUser(firebase.auth().currentUser, currentLicense);
+    }
     loadData(data);
     $("status").textContent = "PDF analysé automatiquement. Vérifie les métrés puis génère les 2 PDF.";
   }catch(err){
@@ -870,6 +994,21 @@ window.addEventListener("afterprint", () => {
     setTimeout(next, 500);
   }else{
     setTimeout(cleanupPrint, 200);
+  }
+});
+$("loginBtn")?.addEventListener("click", loginWithEmail);
+$("loginPassword")?.addEventListener("keydown", e=>{ if(e.key === "Enter") loginWithEmail(); });
+$("logoutBtn")?.addEventListener("click", async ()=>{ await firebase.auth().signOut(); });
+firebase.auth().onAuthStateChanged(async user=>{
+  if(user){
+    setLoggedUser(user, currentLicense);
+    showAuthGate(false);
+    await refreshLicenseStatus();
+  }else{
+    currentLicense = null;
+    setLoggedUser(null, null);
+    showAuthGate(true);
+    setAuthMessage("Connecte-toi pour utiliser le générateur.");
   }
 });
 $("pdfFile").addEventListener("change", async e=>{ const f=e.target.files?.[0]; if(!f)return; await analyzePdfCloud(f); });
