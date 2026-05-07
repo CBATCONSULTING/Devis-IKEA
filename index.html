@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Générateur devis cuisine IKEA - V7.10</title>
+<title>Générateur devis cuisine IKEA - V7.11</title>
 <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="shortcut icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
@@ -188,7 +188,7 @@ input[readonly]{
 <header class="app">
   <h1>Générateur devis cuisine IKEA</h1>
   <div class="header-actions">
-    <span id="appVersionBadge">V7.10 | Moteur en attente</span>
+    <span id="appVersionBadge">V7.11 | Moteur en attente</span>
     <div id="authUserLabel" class="auth-pill hidden">Non connecté</div>
     <button id="logoutBtn" class="logout-btn hidden" type="button">Déconnexion</button>
   </div>
@@ -199,7 +199,7 @@ input[readonly]{
     <h2>Connexion requise</h2>
     <p>Connectez-vous avec votre email autorisé pour générer un devis cuisine IKEA.</p>
     <label for="loginEmail">Email</label>
-    <input id="loginEmail" type="email" autocomplete="username" placeholder="ex : remondjb@gmail.com">
+    <input id="loginEmail" type="email" autocomplete="username" placeholder="ex : utilisateur@entreprise.fr">
     <label for="loginPassword">Mot de passe</label>
     <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Mot de passe">
     <button id="loginBtn" type="button" class="green">Se connecter</button>
@@ -487,7 +487,7 @@ Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides inté
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script>
-const HTML_VERSION = "V7.10";
+const HTML_VERSION = "V7.11";
 const DEFAULT_ENGINE_VERSION = "V4.21-cloud-api-no-ocr";
 const CLOUD_API_ANALYZE_URL = "https://ikea-pdf-analyzer-pntpqiubqq-ew.a.run.app/analyze";
 const CLOUD_API_LICENSE_URL = CLOUD_API_ANALYZE_URL.replace(/\/analyze$/, "/license");
