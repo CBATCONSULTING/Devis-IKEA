@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Générateur devis cuisine IKEA - V7.07</title>
+<title>Générateur devis cuisine IKEA - V7.09</title>
 <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="shortcut icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
@@ -160,7 +160,7 @@ input[readonly]{
 }
 
 
-/* V7.07 : aide dans la fenêtre d'impression Edge/Chrome */
+/* V7.08 : aide dans la fenêtre d'impression Edge/Chrome */
 .print-helper-bar{position:sticky;top:0;z-index:99999;background:#0f172a;color:white;padding:10px 14px;font-family:Arial,Helvetica,sans-serif;font-size:14px;display:flex;align-items:center;gap:10px;justify-content:space-between;box-shadow:0 2px 10px rgba(0,0,0,.25)}
 .print-helper-bar button{background:#16a34a;color:#fff;border:0;border-radius:10px;padding:9px 12px;font-weight:900;cursor:pointer}
 .print-helper-bar .small{opacity:.85;font-size:12px}
@@ -171,7 +171,7 @@ input[readonly]{
 <body>
 <header class="app">
   <h1>Générateur devis cuisine IKEA</h1>
-  <span>V7.07 noms PDF</span>
+  <span id="appVersionBadge">V7.09 | Moteur en attente</span>
 </header>
 
 <main>
@@ -452,8 +452,28 @@ Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides inté
 </main>
 
 <script>
+const HTML_VERSION = "V7.09";
+const DEFAULT_ENGINE_VERSION = "V4.20-cloud-api-no-ocr";
 const CLOUD_API_ANALYZE_URL = "https://ikea-pdf-analyzer-pntpqiubqq-ew.a.run.app/analyze";
 const $ = id => document.getElementById(id);
+function cleanEngineVersion(engineVersion){
+  const raw = String(engineVersion || "").replace(/^Moteur\s*/i, "").trim();
+  const shortMatch = raw.match(/V\d+(?:\.\d+)?/i);
+  if(shortMatch) return shortMatch[0].toUpperCase();
+  return raw
+    .replace(/cloud-api/gi, "")
+    .replace(/no-ocr/gi, "")
+    .replace(/[\s_-]+$/g, "")
+    .replace(/[\s_-]{2,}/g, " ")
+    .trim();
+}
+function setVersionBadge(engineVersion){
+  const badge = $("appVersionBadge");
+  if(!badge) return;
+  const cleanEngine = cleanEngineVersion(engineVersion || DEFAULT_ENGINE_VERSION);
+  badge.textContent = `${HTML_VERSION} | Moteur ${cleanEngine}`;
+}
+setVersionBadge(DEFAULT_ENGINE_VERSION);
 const toNum = value => {
   if(value === null || value === undefined) return 0;
   if(typeof value === "number") return Number.isFinite(value) ? value : 0;
@@ -478,11 +498,13 @@ function hasMetrics(){return n("highQty") || n("highMl") || n("baseQty") || n("b
 function updateMetricsStatus(){
   const el = $("metricsStatus");
   if(!el) return;
+  const badge = $("appVersionBadge");
+  const versionInfo = badge ? ` — ${badge.textContent}` : "";
   if(hasMetrics()){
-    el.textContent = `Métrés chargés : hauts ${n("highQty")} / ${ml(n("highMl"))} ml, bas ${n("baseQty")} / ${ml(n("baseMl"))} ml, colonnes ${n("columnQty")} / ${ml(n("columnMl"))} ml, électros ${n("appliancesQty")}.`;
+    el.textContent = `Métrés chargés : hauts ${n("highQty")} / ${ml(n("highMl"))} ml, bas ${n("baseQty")} / ${ml(n("baseMl"))} ml, colonnes ${n("columnQty")} / ${ml(n("columnMl"))} ml, électros ${n("appliancesQty")}.${versionInfo}`;
     el.style.color = "#166534";
   } else {
-    el.textContent = "Aucun PDF IKEA analysé pour le moment.";
+    el.textContent = `Aucun PDF IKEA analysé pour le moment.${versionInfo}`;
     el.style.color = "#b45309";
   }
 }
@@ -620,6 +642,7 @@ function refresh(){
 function guessName(pdf){return String(pdf||"").replace(/\.[^.]+$/,"").replace(/^(PV|CAD|Devis détaillé|Devis client)\s+/i,"").replace(/\s+au\s+\d{2}[-/]\d{2}[-/]\d{4}.*$/i,"").replace(/_analyse$/,"").trim();}
 function getVal(data, keys){for(const key of keys){if(data && data[key] !== undefined && data[key] !== null && data[key] !== "") return data[key];} return 0;}
 function loadData(data){
+  setVersionBadge(data.version || data.engine_version || data.moteur_version || DEFAULT_ENGINE_VERSION);
   $("clientName").value = guessName(data.pdf_name || data.nom_fichier || data.client || data.clientName);
   const storeFromJson = getVal(data, ["origin_store","origine_store","Origin Store","store","magasin","magasin_rattachement"]);
   if(storeFromJson) $("store").value = storeFromJson;
