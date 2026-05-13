@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Générateur devis cuisine IKEA - V7.12</title>
+<title>Générateur devis cuisine IKEA - V7.13</title>
 <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="shortcut icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
@@ -181,6 +181,23 @@ input[readonly]{
 .auth-msg.err{color:#b91c1c}
 @media print{.auth-gate,.auth-pill,.logout-btn{display:none!important}}
 
+/* V7.13 : modes licence (Challenge Bat / IKEA / marque blanche) */
+body.license-mode-ikea .indice,
+body.license-mode-marque_blanche .indice{
+  display:none!important;
+}
+body.license-provider-locked .provider-row{
+  display:none!important;
+}
+body.hide-partner-logo .challenge-logo{
+  display:none!important;
+}
+body.license-mode-ikea header.app h1::after{
+  content:" — Mode IKEA";
+  font-size:12px;
+  opacity:.75;
+  font-weight:700;
+}
 
 </style>
 </head>
@@ -188,7 +205,7 @@ input[readonly]{
 <header class="app">
   <h1>Générateur devis cuisine IKEA</h1>
   <div class="header-actions">
-    <span id="appVersionBadge">V7.12 | Moteur en attente</span>
+    <span id="appVersionBadge">V7.13 | API en attente | Moteur en attente</span>
     <div id="authUserLabel" class="auth-pill hidden">Non connecté</div>
     <button id="logoutBtn" class="logout-btn hidden" type="button">Déconnexion</button>
   </div>
@@ -234,7 +251,7 @@ input[readonly]{
 <div class="row"><label>Email</label><input id="clientEmail"></div>
 <div class="row"><label>TVA 10%</label><select id="tva10"><option>OUI</option><option>NON</option></select></div>
 <div class="row"><label>Pose souhaitée</label><select id="pose"><option>OUI</option><option>NON</option></select></div>
-<div class="row"><label>Prestataire</label><select id="provider">
+<div class="row provider-row" id="providerRow"><label>Prestataire</label><select id="provider">
 <option>Challenge Bat - Didier</option>
 <option>Challenge Bat - Ébrahim</option>
 <option>Challenge Bat - El-hossein</option>
@@ -254,7 +271,7 @@ input[readonly]{
 <textarea id="extrabatText" placeholder="Coller ici le bloc client Extrabat..."></textarea>
 <div class="btns"><button id="parseExtrabat" class="gray">Récupérer les infos client</button></div>
 
-<h2 style="margin:15px -14px 11px">3) Métrés JSON / devis</h2>
+<h2 style="margin:15px -14px 11px">3) Métrés devis</h2>
 <div class="mini-grid">
 <input id="highQty" type="number" step="1" placeholder="Qté hauts"><input id="highMl" type="number" step="0.01" placeholder="ML hauts">
 <input id="baseQty" type="number" step="1" placeholder="Qté bas"><input id="baseMl" type="number" step="0.01" placeholder="ML bas">
@@ -370,7 +387,7 @@ Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides inté
   <h1 class="title client-title">DEVIS APRÈS MESURE* / INSTALLATION DE CUISINE COMPLÈTE</h1>
   <table class="client-info">
     <tr><td class="label" style="width:32mm">Date :</td><td id="cc_date"></td><td class="label" style="width:32mm">Magasin :</td><td id="cc_store"></td></tr>
-    <tr><td class="label">Prestataire de pose :</td><td colspan="3">SAS CHALLENGE BAT</td></tr>
+    <tr><td class="label">Prestataire de pose :</td><td colspan="3" id="cc_provider"></td></tr>
   </table>
   <table class="client-info">
     <tr><td class="label" style="width:32mm">Nom du client</td><td id="cc_clientName"></td></tr>
@@ -462,7 +479,7 @@ Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides inté
   <h1 class="title-carte client-title">DEVIS APRÈS MESURE* / INSTALLATION DE CUISINE 'À la carte'</h1>
   <table class="client-info">
     <tr><td class="label" style="width:32mm">Date :</td><td id="kc_date"></td><td class="label" style="width:32mm">Magasin :</td><td id="kc_store"></td></tr>
-    <tr><td class="label">Prestataire de pose :</td><td colspan="3">SAS CHALLENGE BAT</td></tr>
+    <tr><td class="label">Prestataire de pose :</td><td colspan="3" id="kc_provider"></td></tr>
   </table>
   <table class="client-info">
     <tr><td class="label" style="width:32mm">Nom du client</td><td id="kc_clientName"></td></tr>
@@ -487,8 +504,9 @@ Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides inté
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script>
-const HTML_VERSION = "V7.12";
-const DEFAULT_ENGINE_VERSION = "V4.21-cloud-api-no-ocr";
+const HTML_VERSION = "V7.13";
+const DEFAULT_ENGINE_VERSION = "V4.25-cloud-api-no-ocr";
+const DEFAULT_API_VERSION = "V1.10-secure";
 const CLOUD_API_ANALYZE_URL = "https://ikea-pdf-analyzer-pntpqiubqq-ew.a.run.app/analyze";
 const CLOUD_API_LICENSE_URL = CLOUD_API_ANALYZE_URL.replace(/\/analyze$/, "/license");
 
@@ -517,18 +535,78 @@ function showAuthGate(show){
   const gate = $("authGate");
   if(gate) gate.classList.toggle("hidden", !show);
 }
+function licenseType(license){
+  return String(license?.license_type || "").trim().toLowerCase();
+}
+function licenseDisplayName(license){
+  const type = licenseType(license);
+  if(type === "challenge_bat") return "Licence Challenge Bat";
+  if(type === "ikea") return "Licence IKEA";
+  if(type === "marque_blanche") return "Licence marque blanche";
+  if(type) return "Licence active";
+  return "Licence en attente";
+}
+function ensureProviderOption(value){
+  const select = $("provider");
+  const clean = String(value || "").trim();
+  if(!select || !clean) return;
+  const exists = Array.from(select.options).some(opt => opt.value === clean || opt.textContent === clean);
+  if(!exists){
+    const opt = document.createElement("option");
+    opt.value = clean;
+    opt.textContent = clean;
+    select.appendChild(opt);
+  }
+  select.value = clean;
+}
+function providerFromLicense(license){
+  const type = licenseType(license);
+  return (
+    license?.technician_label ||
+    license?.provider_label ||
+    license?.provider_name ||
+    license?.provider ||
+    (type === "ikea" ? "IKEA" : "") ||
+    (type === "marque_blanche" ? (license?.company || "Prestataire") : "")
+  );
+}
+function applyLicenseMode(license){
+  const type = licenseType(license);
+  document.body.classList.remove("license-mode-challenge_bat","license-mode-ikea","license-mode-marque_blanche","license-provider-locked","hide-partner-logo");
+  if(type) document.body.classList.add(`license-mode-${type}`);
+
+  const providerLabel = providerFromLicense(license);
+  if(providerLabel) ensureProviderOption(providerLabel);
+
+  const allowChange = license?.allow_provider_change === true;
+  const shouldLockProvider = !!providerLabel && !allowChange;
+  document.body.classList.toggle("license-provider-locked", shouldLockProvider);
+
+  const logoUrl = String(license?.logo_url || "").trim();
+  const partnerLogos = document.querySelectorAll(".challenge-logo");
+  if(logoUrl){
+    partnerLogos.forEach(img => img.src = logoUrl);
+    document.body.classList.remove("hide-partner-logo");
+  }else if(type === "ikea" || type === "marque_blanche"){
+    document.body.classList.add("hide-partner-logo");
+  }
+
+  refresh();
+}
 function setLoggedUser(user, license){
   const label = $("authUserLabel");
   const logout = $("logoutBtn");
   if(user){
-    const licenseText = license?.license_type ? ` — ${license.license_type}` : "";
+    const licenseText = license ? ` — ${licenseDisplayName(license)}` : "";
     if(label) label.textContent = `${user.email || "Connecté"}${licenseText}`;
     label?.classList.remove("hidden");
     logout?.classList.remove("hidden");
+    applyLicenseMode(license || null);
   }else{
     if(label) label.textContent = "Non connecté";
     label?.classList.add("hidden");
     logout?.classList.add("hidden");
+    applyLicenseMode(null);
   }
 }
 async function getCurrentIdToken(forceRefresh=false){
@@ -583,13 +661,19 @@ function cleanEngineVersion(engineVersion){
     .replace(/[\s_-]{2,}/g, " ")
     .trim();
 }
-function setVersionBadge(engineVersion){
+function cleanApiVersion(apiVersion){
+  const raw = String(apiVersion || "").trim();
+  const shortMatch = raw.match(/V\d+(?:\.\d+)?/i);
+  return shortMatch ? shortMatch[0].toUpperCase() : raw.replace(/secure/gi, "").replace(/[\s_-]+$/g, "").trim();
+}
+function setVersionBadge(engineVersion, apiVersion){
   const badge = $("appVersionBadge");
   if(!badge) return;
   const cleanEngine = cleanEngineVersion(engineVersion || DEFAULT_ENGINE_VERSION);
-  badge.textContent = `${HTML_VERSION} | Moteur ${cleanEngine}`;
+  const cleanApi = cleanApiVersion(apiVersion || DEFAULT_API_VERSION);
+  badge.textContent = `${HTML_VERSION} | API ${cleanApi} | Moteur ${cleanEngine}`;
 }
-setVersionBadge(DEFAULT_ENGINE_VERSION);
+setVersionBadge(DEFAULT_ENGINE_VERSION, DEFAULT_API_VERSION);
 const toNum = value => {
   if(value === null || value === undefined) return 0;
   if(typeof value === "number") return Number.isFinite(value) ? value : 0;
@@ -758,7 +842,7 @@ function refresh(){
 function guessName(pdf){return String(pdf||"").replace(/\.[^.]+$/,"").replace(/^(PV|CAD|Devis détaillé|Devis client)\s+/i,"").replace(/\s+au\s+\d{2}[-/]\d{2}[-/]\d{4}.*$/i,"").replace(/_analyse$/,"").trim();}
 function getVal(data, keys){for(const key of keys){if(data && data[key] !== undefined && data[key] !== null && data[key] !== "") return data[key];} return 0;}
 function loadData(data){
-  setVersionBadge(data.version || data.engine_version || data.moteur_version || DEFAULT_ENGINE_VERSION);
+  setVersionBadge(data.version || data.engine_version || data.moteur_version || DEFAULT_ENGINE_VERSION, data.api_version || data.api || DEFAULT_API_VERSION);
   $("clientName").value = guessName(data.pdf_name || data.nom_fichier || data.client || data.clientName);
   const storeFromJson = getVal(data, ["origin_store","origine_store","Origin Store","store","magasin","magasin_rattachement"]);
   if(storeFromJson) $("store").value = storeFromJson;
