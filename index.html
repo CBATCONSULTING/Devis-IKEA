@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Générateur devis cuisine IKEA - V7.13</title>
+<title>Générateur devis cuisine IKEA - V7.14</title>
 <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="shortcut icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
@@ -181,6 +181,33 @@ input[readonly]{
 .auth-msg.err{color:#b91c1c}
 @media print{.auth-gate,.auth-pill,.logout-btn{display:none!important}}
 
+/* V7.14 : analyse directe depuis lien IKEA + fenêtre d'attente */
+.link-mode-box{
+  margin:12px 0 14px;
+  padding:12px;
+  border:1px solid #bfdbfe;
+  background:#f8fbff;
+  border-radius:14px;
+}
+.link-mode-title{font-size:15px;font-weight:900;color:#0f172a;margin-bottom:8px}
+.link-mode-box input{font-size:13px}
+.link-mode-actions{display:flex;gap:8px;align-items:center;margin-top:9px;flex-wrap:wrap}
+.link-mode-actions button{flex:1;min-width:210px}
+.link-mode-box .small{color:#475569;margin-top:8px}
+button:disabled,.drop.is-disabled{opacity:.55;cursor:not-allowed;pointer-events:none}
+.busy-overlay{position:fixed;inset:0;z-index:999998;background:rgba(15,23,42,.58);display:flex;align-items:center;justify-content:center;padding:20px}
+.busy-card{width:min(520px,100%);background:#fff;border-radius:22px;box-shadow:0 24px 80px rgba(15,23,42,.32);padding:22px;border:1px solid #dbeafe;text-align:center}
+.busy-spinner{width:54px;height:54px;margin:0 auto 14px;border:6px solid #dbeafe;border-top-color:#2563eb;border-radius:50%;animation:busySpin .9s linear infinite}
+@keyframes busySpin{to{transform:rotate(360deg)}}
+.busy-card h2{margin:0 0 8px;font-size:20px;color:#0f172a;background:transparent;border:0;padding:0}
+.busy-card p{margin:6px 0;color:#475569;line-height:1.45}
+.busy-step{font-weight:900;color:#1d4ed8;min-height:22px;margin-top:10px}
+.busy-hint{font-size:12px;color:#64748b;margin-top:12px}
+.busy-progress{height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden;margin-top:14px}
+.busy-progress-bar{height:100%;width:25%;background:#2563eb;border-radius:999px;transition:width .35s ease}
+@media print{.busy-overlay,.link-mode-box{display:none!important}}
+
+
 /* V7.13 : modes licence (Challenge Bat / IKEA / marque blanche) */
 body.license-mode-ikea .indice,
 body.license-mode-marque_blanche .indice{
@@ -230,6 +257,16 @@ body.license-mode-ikea header.app h1::after{
 <div class="content">
 <label class="drop" for="pdfFile"><strong>Charger le PDF IKEA</strong></label>
 <input id="pdfFile" class="hidden" type="file" accept="application/pdf,.pdf">
+
+<div class="link-mode-box">
+  <div class="link-mode-title">Analyser depuis un lien IKEA Kitchen Planner</div>
+  <input id="ikeaPlannerUrl" type="url" placeholder="Coller ici le lien public IKEA Kitchen Planner">
+  <div class="link-mode-actions">
+    <button id="analyzeLinkBtn" type="button" class="green">Analyser depuis le lien IKEA</button>
+  </div>
+  <div class="small">Le chargement PDF manuel reste disponible en secours si le lien IKEA ne fonctionne pas.</div>
+</div>
+
 
 <div class="row"><label>Type de devis</label><select id="quoteType"><option value="complete">Installation complète</option><option value="carte">Installation à la carte</option></select></div>
 <div id="carteOptions" class="option-box">
@@ -501,14 +538,27 @@ Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides inté
 </section>
 </main>
 
+
+<section id="busyOverlay" class="busy-overlay hidden" role="status" aria-live="polite" aria-modal="true">
+  <div class="busy-card">
+    <div class="busy-spinner" aria-hidden="true"></div>
+    <h2 id="busyTitle">Analyse en cours</h2>
+    <p id="busyMessage">Veuillez patienter quelques instants.</p>
+    <div id="busyStep" class="busy-step">Préparation...</div>
+    <div class="busy-progress"><div id="busyProgressBar" class="busy-progress-bar"></div></div>
+    <div class="busy-hint">Ne fermez pas cette fenêtre et ne relancez pas l’analyse pendant le traitement.</div>
+  </div>
+</section>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script>
-const HTML_VERSION = "V7.13";
-const DEFAULT_ENGINE_VERSION = "V4.25-cloud-api-no-ocr";
-const DEFAULT_API_VERSION = "V1.10-secure";
-const CLOUD_API_ANALYZE_URL = "https://ikea-pdf-analyzer-pntpqiubqq-ew.a.run.app/analyze";
+const HTML_VERSION = "V7.14";
+const DEFAULT_ENGINE_VERSION = "V4.29-cloud-api";
+const DEFAULT_API_VERSION = "V1.15-secure";
+const CLOUD_API_ANALYZE_URL = "https://ikea-pdf-analyzer-258359623144.europe-west1.run.app/analyze";
 const CLOUD_API_LICENSE_URL = CLOUD_API_ANALYZE_URL.replace(/\/analyze$/, "/license");
+const CLOUD_API_ANALYZE_LINK_URL = CLOUD_API_ANALYZE_URL.replace(/\/analyze$/, "/analyze-link");
 
 const firebaseConfig = {
   apiKey: "AIzaSyB-hKccNAiciGjUeS6L-Ws3KRzYxMyU3L4",
@@ -843,7 +893,7 @@ function guessName(pdf){return String(pdf||"").replace(/\.[^.]+$/,"").replace(/^
 function getVal(data, keys){for(const key of keys){if(data && data[key] !== undefined && data[key] !== null && data[key] !== "") return data[key];} return 0;}
 function loadData(data){
   setVersionBadge(data.version || data.engine_version || data.moteur_version || DEFAULT_ENGINE_VERSION, data.api_version || data.api || DEFAULT_API_VERSION);
-  $("clientName").value = guessName(data.pdf_name || data.nom_fichier || data.client || data.clientName);
+  $("clientName").value = guessName(data.client_name || data.project_name || data.pdf_name || data.nom_fichier || data.client || data.clientName);
   const storeFromJson = getVal(data, ["origin_store","origine_store","Origin Store","store","magasin","magasin_rattachement"]);
   if(storeFromJson) $("store").value = storeFromJson;
   $("highQty").value = toNum(getVal(data, ["meubles_hauts_qty","highQty","hauts_qty"]));
@@ -867,6 +917,53 @@ function loadData(data){
   refresh();
   $("status").textContent = hasMetrics() ? "PDF analysé avec métrés." : "PDF analysé, mais aucun métré détecté.";
 }
+
+let busyMessageTimer = null;
+function setBusyOverlay(show, stepText="", progress=0){
+  const overlay = $("busyOverlay");
+  if(!overlay) return;
+  overlay.classList.toggle("hidden", !show);
+  if(stepText) $("busyStep").textContent = stepText;
+  const bar = $("busyProgressBar");
+  if(bar) bar.style.width = `${Math.max(5, Math.min(100, progress || 0))}%`;
+}
+function startBusyMessages(messages){
+  let index = 0;
+  clearInterval(busyMessageTimer);
+  const apply = () => {
+    const current = messages[Math.min(index, messages.length - 1)];
+    setBusyOverlay(true, current.text, current.progress);
+    index++;
+  };
+  apply();
+  busyMessageTimer = setInterval(apply, 8500);
+}
+function stopBusyMessages(){
+  clearInterval(busyMessageTimer);
+  busyMessageTimer = null;
+}
+function setAnalyzeUiBusy(isBusy, mode="link"){
+  const linkBtn = $("analyzeLinkBtn");
+  const urlInput = $("ikeaPlannerUrl");
+  const drop = document.querySelector('label[for="pdfFile"]');
+  if(linkBtn){
+    linkBtn.disabled = isBusy;
+    linkBtn.textContent = isBusy ? "Analyse en cours..." : "Analyser depuis le lien IKEA";
+  }
+  if(urlInput) urlInput.disabled = isBusy;
+  if(drop) drop.classList.toggle("is-disabled", isBusy);
+  const pdfInput = $("pdfFile");
+  if(pdfInput) pdfInput.disabled = isBusy;
+}
+function isValidIkeaPlannerUrl(url){
+  try{
+    const u = new URL(url);
+    return u.protocol.startsWith("http") && u.hostname === "kitchen.planner.ikea.com" && /\/planner\//i.test(u.pathname);
+  }catch(e){
+    return false;
+  }
+}
+
 async function analyzePdfCloud(file){
   if(!file){
     alert("Choisis d'abord un PDF IKEA.");
@@ -919,6 +1016,82 @@ async function analyzePdfCloud(file){
   }finally{
     if(previousDrop) previousDrop.textContent = "Charger le PDF IKEA";
     $("pdfFile").value = "";
+  }
+}
+
+
+async function analyzeIkeaLinkCloud(){
+  const input = $("ikeaPlannerUrl");
+  const ikeaUrl = (input?.value || "").trim();
+  if(!ikeaUrl){
+    alert("Colle d'abord un lien public IKEA Kitchen Planner.");
+    input?.focus();
+    return;
+  }
+  if(!isValidIkeaPlannerUrl(ikeaUrl)){
+    alert("Ce lien ne ressemble pas à un lien public IKEA Kitchen Planner.");
+    input?.focus();
+    return;
+  }
+
+  $("status").textContent = "Analyse du lien IKEA en cours...";
+  $("metricsStatus").textContent = "Génération du PDF IKEA puis analyse des métrés en cours...";
+  setAnalyzeUiBusy(true, "link");
+  $("busyTitle").textContent = "Analyse du lien IKEA";
+  $("busyMessage").textContent = "Le plan IKEA est ouvert côté serveur, transformé en PDF, puis analysé automatiquement.";
+  startBusyMessages([
+    {text:"1/4 — Vérification du lien IKEA...", progress:18},
+    {text:"2/4 — Génération du PDF IKEA...", progress:42},
+    {text:"3/4 — Analyse du projet et des métrés...", progress:68},
+    {text:"4/4 — Préparation du devis...", progress:88}
+  ]);
+
+  try{
+    const token = await getCurrentIdToken();
+    const res = await fetch(CLOUD_API_ANALYZE_LINK_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ikea_url: ikeaUrl})
+    });
+
+    let data;
+    const text = await res.text();
+    try{
+      data = JSON.parse(text);
+    }catch(parseErr){
+      throw new Error("Réponse cloud illisible : " + text.slice(0, 300));
+    }
+
+    if(!res.ok || data.ok === false){
+      throw new Error(data.message || data.error || ("Erreur API HTTP " + res.status));
+    }
+
+    if(data.license){
+      currentLicense = data.license;
+      setLoggedUser(firebase.auth().currentUser, currentLicense);
+    }
+
+    loadData(data);
+    stopBusyMessages();
+    setBusyOverlay(true, "Analyse terminée.", 100);
+
+    const detectedName = guessName(data.client_name || data.project_name || data.pdf_name || data.source_pdf_filename || "");
+    const pdfInfo = data.source_pdf_filename || data.pdf_name || "PDF IKEA généré";
+    $("status").textContent = "Lien IKEA analysé automatiquement. Vérifie les métrés puis génère les 2 PDF.";
+    $("metricsStatus").textContent = detectedName ? `Analyse lien IKEA OK — ${detectedName} — ${pdfInfo}` : `Analyse lien IKEA OK — ${pdfInfo}`;
+  }catch(err){
+    console.error(err);
+    stopBusyMessages();
+    setBusyOverlay(false);
+    $("status").textContent = "Erreur pendant l'analyse du lien IKEA.";
+    $("metricsStatus").textContent = "Le chargement PDF manuel reste disponible en secours.";
+    alert("Impossible d'analyser le lien IKEA avec l'API Cloud Run :\n\n" + err.message + "\n\nSolution de secours : imprime le plan IKEA en PDF puis utilise le bouton Charger le PDF IKEA.");
+  }finally{
+    setAnalyzeUiBusy(false, "link");
+    setTimeout(() => setBusyOverlay(false), 700);
   }
 }
 
@@ -1096,6 +1269,8 @@ firebase.auth().onAuthStateChanged(async user=>{
   }
 });
 $("pdfFile").addEventListener("change", async e=>{ const f=e.target.files?.[0]; if(!f)return; await analyzePdfCloud(f); });
+$("analyzeLinkBtn")?.addEventListener("click", analyzeIkeaLinkCloud);
+$("ikeaPlannerUrl")?.addEventListener("keydown", e=>{ if(e.key === "Enter") analyzeIkeaLinkCloud(); });
 $("parseExtrabat").addEventListener("click", parseExtrabatBlock);
 $("printBoth").addEventListener("click", printBoth);
 $("printDetail").addEventListener("click",()=>printOne("detail"));
