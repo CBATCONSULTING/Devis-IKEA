@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Générateur devis cuisine IKEA - V7.14b TEST</title>
+<title>Générateur devis cuisine IKEA - V7.14c TEST</title>
 <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="shortcut icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
@@ -181,19 +181,29 @@ input[readonly]{
 .auth-msg.err{color:#b91c1c}
 @media print{.auth-gate,.auth-pill,.logout-btn{display:none!important}}
 
-/* V7.14 : analyse directe depuis lien IKEA + fenêtre d'attente */
+/* V7.14c TEST : mode lien IKEA volontairement discret, PDF manuel recommandé */
+.drop.pdf-primary{
+  border-color:#2563eb;
+  background:linear-gradient(180deg,#f8fbff,#eff6ff);
+  color:#0f172a;
+  font-size:16px;
+}
+.drop.pdf-primary strong::before{content:"Méthode recommandée — ";color:#2563eb}
 .link-mode-box{
   margin:12px 0 14px;
-  padding:12px;
-  border:1px solid #bfdbfe;
-  background:#f8fbff;
+  padding:11px;
+  border:1px solid #e2e8f0;
+  background:#f8fafc;
   border-radius:14px;
 }
-.link-mode-title{font-size:15px;font-weight:900;color:#0f172a;margin-bottom:8px}
-.link-mode-box input{font-size:13px}
+.link-mode-title{font-size:13px;font-weight:900;color:#475569;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.link-beta-badge{display:inline-flex;align-items:center;border-radius:999px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:11px;font-weight:900;padding:3px 8px;text-transform:uppercase;letter-spacing:.02em}
+.link-mode-box input{font-size:13px;background:#fff}
 .link-mode-actions{display:flex;gap:8px;align-items:center;margin-top:9px;flex-wrap:wrap}
-.link-mode-actions button{flex:1;min-width:210px}
-.link-mode-box .small{color:#475569;margin-top:8px}
+.link-mode-actions button{flex:0 1 auto;min-width:190px;padding:9px 12px;font-size:13px;border-radius:10px}
+button.link-beta-btn{background:#e2e8f0;color:#334155;border:1px solid #cbd5e1}
+button.link-beta-btn:hover{background:#cbd5e1;color:#0f172a}
+.link-mode-box .small{color:#64748b;margin-top:8px}
 button:disabled,.drop.is-disabled{opacity:.55;cursor:not-allowed;pointer-events:none}
 .busy-overlay{position:fixed;inset:0;z-index:999998;background:rgba(15,23,42,.58);display:flex;align-items:center;justify-content:center;padding:20px}
 .busy-card{width:min(520px,100%);background:#fff;border-radius:22px;box-shadow:0 24px 80px rgba(15,23,42,.32);padding:22px;border:1px solid #dbeafe;text-align:center}
@@ -232,7 +242,7 @@ body.license-mode-ikea header.app h1::after{
 <header class="app">
   <h1>Générateur devis cuisine IKEA</h1>
   <div class="header-actions">
-    <span id="appVersionBadge">V7.14b TEST | API en attente | Moteur en attente</span>
+    <span id="appVersionBadge">V7.14c TEST | API en attente | Moteur en attente</span>
     <div id="authUserLabel" class="auth-pill hidden">Non connecté</div>
     <button id="logoutBtn" class="logout-btn hidden" type="button">Déconnexion</button>
   </div>
@@ -255,16 +265,16 @@ body.license-mode-ikea header.app h1::after{
 <section class="card">
 <h2>1) Données</h2>
 <div class="content">
-<label class="drop" for="pdfFile"><strong>Charger le PDF IKEA</strong></label>
+<label class="drop pdf-primary" for="pdfFile"><strong>Charger le PDF IKEA</strong></label>
 <input id="pdfFile" class="hidden" type="file" accept="application/pdf,.pdf">
 
 <div class="link-mode-box">
-  <div class="link-mode-title">Analyser depuis un lien IKEA Kitchen Planner</div>
+  <div class="link-mode-title">Option avancée : lien IKEA Kitchen Planner <span class="link-beta-badge">Bêta</span></div>
   <input id="ikeaPlannerUrl" type="url" placeholder="Coller ici le lien public IKEA Kitchen Planner">
   <div class="link-mode-actions">
-    <button id="analyzeLinkBtn" type="button" class="green">Analyser depuis le lien IKEA</button>
+    <button id="analyzeLinkBtn" type="button" class="link-beta-btn">Tester le lien IKEA (bêta)</button>
   </div>
-  <div class="small">Le chargement PDF manuel reste disponible en secours si le lien IKEA ne fonctionne pas.</div>
+  <div class="small">Option expérimentale. Si cela échoue, imprimez le plan IKEA en PDF puis utilisez la méthode recommandée ci-dessus.</div>
 </div>
 
 
@@ -949,7 +959,7 @@ function setAnalyzeUiBusy(isBusy, mode="link"){
   const drop = document.querySelector('label[for="pdfFile"]');
   if(linkBtn){
     linkBtn.disabled = isBusy;
-    linkBtn.textContent = isBusy ? "Analyse en cours..." : "Analyser depuis le lien IKEA";
+    linkBtn.textContent = isBusy ? "Analyse en cours..." : "Tester le lien IKEA (bêta)";
   }
   if(urlInput) urlInput.disabled = isBusy;
   if(drop) drop.classList.toggle("is-disabled", isBusy);
@@ -1015,7 +1025,7 @@ async function analyzePdfCloud(file){
     $("status").textContent = "Erreur pendant l'analyse cloud.";
     alert("Impossible d'analyser le PDF avec l'API Cloud Run :\n\n" + err.message);
   }finally{
-    if(previousDrop) previousDrop.textContent = "Charger le PDF IKEA";
+    if(previousDrop) previousDrop.innerHTML = "<strong>Charger le PDF IKEA</strong>";
     $("pdfFile").value = "";
   }
 }
@@ -1102,7 +1112,7 @@ async function analyzeIkeaLinkCloud(){
       : (err.message || "Erreur inconnue pendant l'analyse du lien IKEA.");
     $("status").textContent = isAbort ? "Analyse du lien IKEA interrompue après délai." : "Erreur pendant l'analyse du lien IKEA.";
     $("metricsStatus").textContent = "Le chargement PDF manuel reste disponible en secours.";
-    alert("Impossible d'analyser le lien IKEA avec l'API Cloud Run :\n\n" + friendlyMessage + "\n\nSolution de secours : imprime le plan IKEA en PDF puis utilise le bouton Charger le PDF IKEA.");
+    alert("Impossible d'analyser le lien IKEA avec l'API Cloud Run :\n\n" + friendlyMessage + "\n\nSolution de secours : imprimez le plan IKEA en PDF puis utilisez le bouton Charger le PDF IKEA.");
   }finally{
     setAnalyzeUiBusy(false, "link");
     setTimeout(() => setBusyOverlay(false), 300);
