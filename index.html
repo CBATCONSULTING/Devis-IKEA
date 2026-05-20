@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Générateur devis cuisine IKEA - V7.13</title>
+<title>Générateur devis cuisine IKEA - V7.15</title>
 <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="shortcut icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
@@ -80,7 +80,7 @@ th{background:#d9d9d9;font-weight:900;text-align:center}
 .w-ttc{width:25mm}
 .client-table td{height:3.3mm;font-size:5.6pt;padding:0.5mm 0.8mm}
 .meta-table td{height:3.4mm;font-size:5.6pt;padding:0.5mm 0.8mm}
-.header-grid{display:grid;grid-template-columns:1fr 55mm;gap:10mm;margin-top:1.2mm}
+.header-grid{display:grid;grid-template-columns:126mm 55mm;gap:7mm;margin-top:1.2mm}
 .main-table td,.main-table th{height:3.05mm}
 .main-table .service{font-weight:900;text-align:center}
 .main-table .tiny{font-size:4.5pt}
@@ -181,7 +181,7 @@ input[readonly]{
 .auth-msg.err{color:#b91c1c}
 @media print{.auth-gate,.auth-pill,.logout-btn{display:none!important}}
 
-/* V7.13 : modes licence (Challenge Bat / IKEA / marque blanche) */
+/* V7.14 : modes licence + prestataire automatique via licence */
 body.license-mode-ikea .indice,
 body.license-mode-marque_blanche .indice{
   display:none!important;
@@ -199,13 +199,18 @@ body.license-mode-ikea header.app h1::after{
   font-weight:700;
 }
 
+/* V7.15 : prestataire détaillé sur une seule ligne dans les devis détaillés */
+.provider-meta-table{width:126mm!important}
+.provider-meta-table .provider-label-cell{width:37mm!important}
+.provider-print-line{font-size:4.55pt!important;white-space:nowrap!important;letter-spacing:-0.035mm;line-height:1.05!important}
+
 </style>
 </head>
 <body>
 <header class="app">
   <h1>Générateur devis cuisine IKEA</h1>
   <div class="header-actions">
-    <span id="appVersionBadge">V7.13 | API en attente | Moteur en attente</span>
+    <span id="appVersionBadge">V7.15 | API en attente | Moteur en attente</span>
     <div id="authUserLabel" class="auth-pill hidden">Non connecté</div>
     <button id="logoutBtn" class="logout-btn hidden" type="button">Déconnexion</button>
   </div>
@@ -330,7 +335,7 @@ Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides inté
   <div class="header-grid">
     <div>
       <table class="meta-table" style="width:68mm"><tr><td class="label center">Pose souhaitée</td><td class="y center bold" id="d_pose"></td></tr></table>
-      <table class="meta-table mt2" style="width:68mm"><tr><td class="label center">Prestataire de mesure et<br>d'installation</td><td class="y bold" id="d_provider"></td></tr><tr><td class="label center">Plan de travail</td><td class="y" id="d_planType"></td></tr></table>
+      <table class="meta-table mt2 provider-meta-table"><tr><td class="label center provider-label-cell">Prestataire de mesure et<br>d'installation</td><td class="y bold provider-print-line" id="d_provider"></td></tr><tr><td class="label center provider-label-cell">Plan de travail</td><td class="y" id="d_planType"></td></tr></table>
     </div>
     <table class="meta-table" style="width:55mm"><tr><td class="label center">Zone</td><td class="center bold" style="color:#6d28d9" id="d_zone"></td></tr><tr><td class="label center">Magasin de<br>rattachement</td><td id="d_store"></td></tr></table>
   </div>
@@ -354,11 +359,11 @@ Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides inté
     <tr><td class="service" rowspan="5">Installation cuisine<br>Plan de travail<br>et Crédence</td><td>Sur-mesure (hors quartz) - Plan de travail, Découpe et pose</td><td class="blk"></td><td class="center bold tiny">inclus dans le prix</td><td class="center">x</td><td class="y center" id="d_customMl"></td><td class="center">=</td><td class="center">inclus</td></tr>
     <tr><td>Prêt à poser - Plan de travail<br>Découpe et pose</td><td class="blk"></td><td class="center bold tiny">inclus dans le prix</td><td class="center">x</td><td class="y center" id="d_readyMl"></td><td class="center">=</td><td class="center">inclus</td></tr>
     <tr><td>Stratifié - Crédence (prêt à poser et sur mesure)<br>Découpe et pose</td><td class="blk"></td><td class="center bold tiny">inclus dans le prix</td><td class="center">x</td><td class="y center" id="d_backsplashMl"></td><td class="center">=</td><td class="center">inclus</td></tr>
-    <tr><td id="d_nerosteinLabel"></td><td class="blk"></td><td></td><td></td><td></td><td class="center">=</td><td class="right" id="d_nerosteinTtcShort"></td></tr>
+    <tr><td id="d_nerosteinLabel"></td><td class="blk"></td><td class="blk"></td><td class="blk"></td><td class="blk"></td><td class="center">=</td><td class="right" id="d_nerosteinTtcShort"></td></tr>
     <tr class="b bold"><td colspan="5" class="right">Sous Total 2 : Installation cuisine - Pose Plan de travail et crédence</td><td class="center">=</td><td class="right" id="d_subtotalPlan"></td></tr>
 
     <tr><td class="no-border"></td><td colspan="2" class="dg">Partie prestataire (ne pas toucher)</td><td colspan="3" class="dg">ML plan de travail + crédence</td><td class="dg" colspan="2" id="d_planTotalMl"></td></tr>
-    <tr><td class="service">Installation<br>Electroménager</td><td>Electroménager</td><td class="y center" id="d_appliancesQty"></td><td class="center bold tiny">inclus dans le prix</td><td class="center">x</td><td class="y center">1,00</td><td class="center">=</td><td class="center">inclus</td></tr>
+    <tr><td class="service">Installation<br>Electroménager</td><td>Electroménager</td><td class="y center" id="d_appliancesQty"></td><td class="center bold tiny">inclus dans le prix</td><td class="blk"></td><td class="blk"></td><td class="center">=</td><td class="center">inclus</td></tr>
     <tr class="o bold"><td></td><td colspan="5" class="right">Sous Total 3 : Installation cuisine - Pose Electroménagers</td><td class="center">=</td><td class="right">inclus</td></tr>
     <tr><td class="no-border"></td><td colspan="2" class="dg">Partie prestataire (ne pas toucher)</td><td colspan="3" class="dg">nombre électroménagers</td><td class="dg" colspan="2" id="d_appliancesPrest"></td></tr>
   </table>
@@ -428,7 +433,7 @@ Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides inté
   <div class="header-grid">
     <div>
       <table class="meta-table" style="width:68mm"><tr><td class="label center">Pose souhaitée</td><td class="y center bold" id="cd_pose"></td></tr></table>
-      <table class="meta-table mt2" style="width:68mm"><tr><td class="label center">Prestataire de mesure et<br>d'installation</td><td class="y bold" id="cd_provider"></td></tr></table>
+      <table class="meta-table mt2 provider-meta-table"><tr><td class="label center provider-label-cell">Prestataire de mesure et<br>d'installation</td><td class="y bold provider-print-line" id="cd_provider"></td></tr></table>
     </div>
     <table class="meta-table" style="width:55mm"><tr><td class="label center">Zone</td><td class="center bold" style="color:#6d28d9" id="cd_zone"></td></tr><tr><td class="label center">Magasin de<br>rattachement</td><td id="cd_store"></td></tr></table>
   </div>
@@ -504,9 +509,9 @@ Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides inté
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script>
-const HTML_VERSION = "V7.13";
-const DEFAULT_ENGINE_VERSION = "V4.25-cloud-api-no-ocr";
-const DEFAULT_API_VERSION = "V1.10-secure";
+const HTML_VERSION = "V7.15";
+const DEFAULT_ENGINE_VERSION = "V4.35-cloud-api-no-ocr";
+const DEFAULT_API_VERSION = "V1.20-secure";
 const CLOUD_API_ANALYZE_URL = "https://ikea-pdf-analyzer-pntpqiubqq-ew.a.run.app/analyze";
 const CLOUD_API_LICENSE_URL = CLOUD_API_ANALYZE_URL.replace(/\/analyze$/, "/license");
 
@@ -559,16 +564,97 @@ function ensureProviderOption(value){
   }
   select.value = clean;
 }
+function isLicenseAdmin(license){
+  return String(license?.role || "").trim().toLowerCase() === "admin";
+}
+function challengeBatNameFromEmail(email){
+  const cleanEmail = String(email || "").trim().toLowerCase();
+  const local = cleanEmail.split("@")[0].replace(/[._\s]+/g, "-");
+  const domain = cleanEmail.split("@")[1] || "";
+  if(!domain.includes("challengebat")) return "";
+  const names = {
+    "didier": "Didier",
+    "ebrahim": "Ébrahim",
+    "el-hossein": "El-hossein",
+    "elhossein": "El-hossein",
+    "el_hossein": "El-hossein",
+    "eddy": "Eddy",
+    "florent": "Florent",
+    "jean-baptiste": "Jean-Baptiste",
+    "jeanbaptiste": "Jean-Baptiste",
+    "jb": "Jean-Baptiste",
+    "kevin": "Kévin",
+    "stevens": "Stevens",
+    "yacine": "Yacine"
+  };
+  return names[local] || "";
+}
+function formatTechnicianProvider(company, technicianName){
+  const name = String(technicianName || "").trim();
+  const rawCompany = String(company || "").trim();
+  if(!name) return "";
+  if(/challenge\s*bat/i.test(rawCompany)) return `Challenge Bat - ${name}`;
+  if(rawCompany) return `${rawCompany} - ${name}`;
+  return name;
+}
 function providerFromLicense(license){
   const type = licenseType(license);
-  return (
+  const company = license?.provider_company || license?.company || "";
+  const explicitProvider =
     license?.technician_label ||
     license?.provider_label ||
     license?.provider_name ||
-    license?.provider ||
+    license?.provider;
+  if(explicitProvider) return explicitProvider;
+
+  const email = license?.technician_email || license?.email || firebase.auth().currentUser?.email || "";
+  const technicianName =
+    license?.technician_name ||
+    license?.technician_firstname ||
+    challengeBatNameFromEmail(email);
+
+  const providerFromTechnician = formatTechnicianProvider(company, technicianName);
+  if(providerFromTechnician) return providerFromTechnician;
+
+  return (
     (type === "ikea" ? "IKEA" : "") ||
-    (type === "marque_blanche" ? (license?.company || "Prestataire") : "")
+    (type === "marque_blanche" ? (company || "Prestataire") : "")
   );
+}
+function extractTechnicianNameFromProvider(providerValue){
+  const raw = String(providerValue || "").trim();
+  if(!raw) return "";
+  const parts = raw.split("-").map(v => v.trim()).filter(Boolean);
+  if(parts.length >= 2) return parts[parts.length - 1];
+  return raw;
+}
+function providerCompanyForPrint(license){
+  const rawCompany = String(license?.provider_company || license?.company || "").trim();
+  const providerValue = providerFromLicense(license) || t("provider");
+  if(/challenge\s*bat/i.test(rawCompany) || /challenge\s*bat/i.test(providerValue)) return "CHALLENGE BAT";
+  if(licenseType(license) === "ikea" || /ikea/i.test(rawCompany) || /ikea/i.test(providerValue)) return "IKEA";
+  return rawCompany ? rawCompany.replace(/^SAS\s+/i, "").toUpperCase() : "";
+}
+function detailedProviderLine(){
+  const license = currentLicense || {};
+  const currentUserEmail = firebase.auth().currentUser?.email || "";
+  const providerValue = providerFromLicense(license) || t("provider");
+  const email = String(license?.technician_email || license?.email || currentUserEmail || "").trim();
+  const technicianName = String(
+    license?.technician_name ||
+    license?.technician_firstname ||
+    challengeBatNameFromEmail(email) ||
+    extractTechnicianNameFromProvider(providerValue) ||
+    ""
+  ).trim();
+  const phone = String(license?.technician_phone || license?.phone || license?.telephone || license?.tel || "").trim();
+  const company = providerCompanyForPrint(license);
+
+  if(technicianName && company && email && phone) return `Par ${technicianName} - ${company} - ${email} — ${phone}`;
+  if(technicianName && company && email) return `Par ${technicianName} - ${company} - ${email}`;
+  if(technicianName && company && phone) return `Par ${technicianName} - ${company} — ${phone}`;
+  if(technicianName && company) return `Par ${technicianName} - ${company}`;
+  return providerValue;
 }
 function applyLicenseMode(license){
   const type = licenseType(license);
@@ -578,7 +664,8 @@ function applyLicenseMode(license){
   const providerLabel = providerFromLicense(license);
   if(providerLabel) ensureProviderOption(providerLabel);
 
-  const allowChange = license?.allow_provider_change === true;
+  const isAdmin = isLicenseAdmin(license);
+  const allowChange = isAdmin || license?.allow_provider_change === true;
   const shouldLockProvider = !!providerLabel && !allowChange;
   document.body.classList.toggle("license-provider-locked", shouldLockProvider);
 
@@ -771,6 +858,7 @@ function calcCarte(){
 function refreshComplete(){
   const c = calcComplete(), d = commonData();
   for(const [k,v] of Object.entries(d)){set("d_"+k,v);set("cc_"+k,v);}
+  set("d_provider", detailedProviderLine());
   set("d_highQty",n("highQty")); set("d_highUnit",c.highUnit+" €"); set("d_highMl",ml(n("highMl"))); set("d_highTtc",money(c.high));
   set("d_baseQty",n("baseQty")); set("d_baseUnit",c.baseUnit+" €"); set("d_baseMl",ml(n("baseMl"))); set("d_baseTtc",money(c.base));
   set("d_islandQty",n("islandQty")); set("d_islandUnit",c.baseUnit+" €"); set("d_islandMl",ml(n("islandMl"))); set("d_islandTtc",moneyOrDash(c.island));
@@ -795,6 +883,7 @@ function refreshComplete(){
 function refreshCarte(){
   const c = calcCarte(), d = commonData();
   for(const [k,v] of Object.entries(d)){set("cd_"+k,v);set("kc_"+k,v);}
+  set("cd_provider", detailedProviderLine());
   set("cd_highQty",n("highQty")); set("cd_highMl",ml(n("highMl"))); set("cd_highTtc",money(n("highMl")*35));
   set("cd_baseQty",n("baseQty")); set("cd_baseMl",ml(n("baseMl"))); set("cd_baseTtc",money(n("baseMl")*85));
   set("cd_islandQty",n("islandQty")); set("cd_islandMl",ml(n("islandMl"))); set("cd_islandTtc",moneyOrDash(n("islandMl")*85));
