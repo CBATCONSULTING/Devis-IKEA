@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Générateur devis cuisine IKEA - V7.15</title>
+<title>Générateur devis cuisine IKEA - V7.16</title>
 <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="shortcut icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
@@ -204,13 +204,18 @@ body.license-mode-ikea header.app h1::after{
 .provider-meta-table .provider-label-cell{width:37mm!important}
 .provider-print-line{font-size:4.55pt!important;white-space:nowrap!important;letter-spacing:-0.035mm;line-height:1.05!important}
 
+/* V7.16 : masquer le bloc Extrabat pour les utilisateurs IKEA */
+body.license-mode-ikea .extrabat-block{
+  display:none!important;
+}
+
 </style>
 </head>
 <body>
 <header class="app">
   <h1>Générateur devis cuisine IKEA</h1>
   <div class="header-actions">
-    <span id="appVersionBadge">V7.15 | API en attente | Moteur en attente</span>
+    <span id="appVersionBadge">V7.16 | API en attente | Moteur en attente</span>
     <div id="authUserLabel" class="auth-pill hidden">Non connecté</div>
     <button id="logoutBtn" class="logout-btn hidden" type="button">Déconnexion</button>
   </div>
@@ -272,11 +277,13 @@ body.license-mode-ikea header.app h1::after{
 <div class="row"><label>Zone</label><select id="zone"><option value="Zone-001">Zone-001</option><option value="Zone-002">Zone-002</option></select></div>
 <div class="row"><label>Magasin</label><input id="store" placeholder="Récupéré depuis Extrabat"></div>
 
+<div id="extrabatBlock" class="extrabat-block">
 <h2 style="margin:15px -14px 11px">2) Coller infos Extrabat</h2>
 <textarea id="extrabatText" placeholder="Coller ici le bloc client Extrabat..."></textarea>
 <div class="btns"><button id="parseExtrabat" class="gray">Récupérer les infos client</button></div>
+</div>
 
-<h2 style="margin:15px -14px 11px">3) Métrés devis</h2>
+<h2 id="metricsTitle" style="margin:15px -14px 11px">3) Métrés devis</h2>
 <div class="mini-grid">
 <input id="highQty" type="number" step="1" placeholder="Qté hauts"><input id="highMl" type="number" step="0.01" placeholder="ML hauts">
 <input id="baseQty" type="number" step="1" placeholder="Qté bas"><input id="baseMl" type="number" step="0.01" placeholder="ML bas">
@@ -509,7 +516,7 @@ Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides inté
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script>
-const HTML_VERSION = "V7.15";
+const HTML_VERSION = "V7.16";
 const DEFAULT_ENGINE_VERSION = "V4.35-cloud-api-no-ocr";
 const DEFAULT_API_VERSION = "V1.20-secure";
 const CLOUD_API_ANALYZE_URL = "https://ikea-pdf-analyzer-pntpqiubqq-ew.a.run.app/analyze";
@@ -660,6 +667,11 @@ function applyLicenseMode(license){
   const type = licenseType(license);
   document.body.classList.remove("license-mode-challenge_bat","license-mode-ikea","license-mode-marque_blanche","license-provider-locked","hide-partner-logo");
   if(type) document.body.classList.add(`license-mode-${type}`);
+
+  const metricsTitle = $("metricsTitle");
+  if(metricsTitle){
+    metricsTitle.textContent = type === "ikea" ? "2) Métrés devis" : "3) Métrés devis";
+  }
 
   const providerLabel = providerFromLicense(license);
   if(providerLabel) ensureProviderOption(providerLabel);
