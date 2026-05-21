@@ -214,13 +214,24 @@ body.license-mode-ikea .ikea-auto-zone-row{
   display:none!important;
 }
 
+/* V7.18 : options terrain Challenge Bat / non-IKEA */
+.metric-adjustments{margin:12px 0 10px;padding:12px;border:2px solid #f59e0b;background:#fff7ed;border-radius:14px;color:#7c2d12}
+.metric-adjustments .adjust-title{font-weight:900;margin-bottom:7px;color:#9a3412}
+.metric-adjustments .adjust-line{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:8px 0}
+.metric-adjustments .adjust-text{font-size:12px;font-weight:800;line-height:1.25;flex:1 1 210px}
+.metric-adjustments button{background:#f97316;color:white;border:0;border-radius:10px;padding:8px 10px;font-weight:900;cursor:pointer}
+.metric-adjustments button.active{background:#7c2d12}
+.metric-adjustments button:disabled{background:#fed7aa;color:#9a3412;cursor:not-allowed}
+.metric-adjustments .adjust-status{font-size:12px;font-weight:900;color:#9a3412;margin-top:6px}
+body.license-mode-ikea .metric-adjustments{display:none!important}
+
 </style>
 </head>
 <body>
 <header class="app">
   <h1>Générateur devis cuisine IKEA</h1>
   <div class="header-actions">
-    <span id="appVersionBadge">V7.17 | API en attente | Moteur en attente</span>
+    <span id="appVersionBadge">V7.18 | API en attente | Moteur en attente</span>
     <div id="authUserLabel" class="auth-pill hidden">Non connecté</div>
     <button id="logoutBtn" class="logout-btn hidden" type="button">Déconnexion</button>
   </div>
@@ -300,6 +311,18 @@ body.license-mode-ikea .ikea-auto-zone-row{
 <input id="wasteQty" type="hidden" value="1"><input id="travelFee" type="hidden" value="50" readonly>
 </div>
 
+<div id="metricAdjustments" class="metric-adjustments hidden">
+  <div class="adjust-title">Options technicien — ajustement du ML bas avant impression</div>
+  <div id="cornerVoidAdjustLine" class="adjust-line hidden">
+    <div id="cornerVoidAdjustText" class="adjust-text">Vides d’angle inclus selon méthode IKEA.</div>
+    <button id="toggleCornerVoidBtn" type="button">Retirer les vides d’angle</button>
+  </div>
+  <div id="applianceMlAdjustLine" class="adjust-line hidden">
+    <div id="applianceMlAdjustText" class="adjust-text">Électroménagers sous plan inclus dans le linéaire bas.</div>
+    <button id="toggleApplianceMlBtn" type="button">Retirer ces ML</button>
+  </div>
+  <div id="adjustmentStatus" class="adjust-status"></div>
+</div>
 
 <div class="note">
 Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides intégrés + électros intégrés + électros en pose libre placés dans le linéaire.
@@ -521,9 +544,9 @@ Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides inté
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script>
-const HTML_VERSION = "V7.17";
-const DEFAULT_ENGINE_VERSION = "V4.35-cloud-api-no-ocr";
-const DEFAULT_API_VERSION = "V1.20-secure";
+const HTML_VERSION = "V7.18";
+const DEFAULT_ENGINE_VERSION = "V4.41-cloud-api-no-ocr";
+const DEFAULT_API_VERSION = "V1.26-secure";
 const CLOUD_API_ANALYZE_URL = "https://ikea-pdf-analyzer-pntpqiubqq-ew.a.run.app/analyze";
 const CLOUD_API_LICENSE_URL = CLOUD_API_ANALYZE_URL.replace(/\/analyze$/, "/license");
 
@@ -841,6 +864,86 @@ const dateFile = () => {
 };
 function safeFilePart(value){return String(value || "Client").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();}
 function set(id, value){const el=$(id); if(el) el.textContent = value ?? "";}
+
+const metricAdjustState = {
+  officialBaseMl: 0,
+  cornerVoidMl: 0,
+  applianceMl: 0,
+  removeCornerVoid: false,
+  removeApplianceMl: false
+};
+
+function isIkeaLicenseMode(){
+  return licenseType(currentLicense) === "ikea";
+}
+
+function resetMetricAdjustmentsFromData(data){
+  const officialBase = toNum(getVal(data, ["meubles_bas_ml","baseMl","bas_ml"]));
+  metricAdjustState.officialBaseMl = officialBase;
+  metricAdjustState.cornerVoidMl = toNum(getVal(data, ["meubles_bas_vide_angle_ml","meubles_bas_angle_void_ml","base_corner_void_ml","corner_void_ml"]));
+  metricAdjustState.applianceMl = toNum(getVal(data, ["meubles_bas_pose_libre_ml","meubles_bas_electros_sous_plan_ml","base_appliance_ml","pose_libre_ml"]));
+  metricAdjustState.removeCornerVoid = false;
+  metricAdjustState.removeApplianceMl = false;
+}
+
+function adjustedBaseMl(){
+  let value = metricAdjustState.officialBaseMl || n("baseMl");
+  if(metricAdjustState.removeCornerVoid) value -= metricAdjustState.cornerVoidMl || 0;
+  if(metricAdjustState.removeApplianceMl) value -= metricAdjustState.applianceMl || 0;
+  return Math.max(0, r2(value));
+}
+
+function applyMetricAdjustments(){
+  if(!metricAdjustState.officialBaseMl) metricAdjustState.officialBaseMl = n("baseMl");
+  const value = adjustedBaseMl();
+  $("baseMl").value = value || "";
+  updateAdjustmentPanel();
+  refresh();
+}
+
+function updateAdjustmentPanel(){
+  const box = $("metricAdjustments");
+  if(!box) return;
+
+  const hasCorner = (metricAdjustState.cornerVoidMl || 0) > 0;
+  const hasAppliance = (metricAdjustState.applianceMl || 0) > 0;
+  const shouldShow = !isIkeaLicenseMode() && (hasCorner || hasAppliance);
+
+  box.classList.toggle("hidden", !shouldShow);
+  if(!shouldShow) return;
+
+  const cornerLine = $("cornerVoidAdjustLine");
+  const applianceLine = $("applianceMlAdjustLine");
+  cornerLine?.classList.toggle("hidden", !hasCorner);
+  applianceLine?.classList.toggle("hidden", !hasAppliance);
+
+  if(hasCorner){
+    set("cornerVoidAdjustText", `⚠️ Vides d’angle inclus selon méthode IKEA : +${ml(metricAdjustState.cornerVoidMl)} ml`);
+    const btn = $("toggleCornerVoidBtn");
+    if(btn){
+      btn.textContent = metricAdjustState.removeCornerVoid ? "Réintégrer les vides d’angle" : "Retirer les vides d’angle";
+      btn.classList.toggle("active", metricAdjustState.removeCornerVoid);
+    }
+  }
+
+  if(hasAppliance){
+    set("applianceMlAdjustText", `⚠️ Électroménagers sous plan inclus dans le ML bas : +${ml(metricAdjustState.applianceMl)} ml`);
+    const btn = $("toggleApplianceMlBtn");
+    if(btn){
+      btn.textContent = metricAdjustState.removeApplianceMl ? "Réintégrer ces ML" : "Retirer ces ML";
+      btn.classList.toggle("active", metricAdjustState.removeApplianceMl);
+    }
+  }
+
+  const official = metricAdjustState.officialBaseMl || n("baseMl");
+  const adjusted = adjustedBaseMl();
+  const removed = r2(official - adjusted);
+  set("adjustmentStatus", removed > 0
+    ? `ML bas officiel : ${ml(official)} ml → ML bas ajusté : ${ml(adjusted)} ml (-${ml(removed)} ml)`
+    : `ML bas officiel conservé : ${ml(official)} ml`
+  );
+}
+
 function hasMetrics(){return n("highQty") || n("highMl") || n("baseQty") || n("baseMl") || n("columnQty") || n("columnMl") || n("readyMl") || n("customMl") || n("backsplashMl") || n("appliancesQty");}
 function updateMetricsStatus(){
   const el = $("metricsStatus");
@@ -854,6 +957,7 @@ function updateMetricsStatus(){
     el.textContent = `Aucun PDF IKEA analysé pour le moment.${versionInfo}`;
     el.style.color = "#b45309";
   }
+  updateAdjustmentPanel();
 }
 function commonData(){
   syncIkeaZoneAndStoreFromPostalCode();
@@ -1000,7 +1104,8 @@ function loadData(data){
   $("highQty").value = toNum(getVal(data, ["meubles_hauts_qty","highQty","hauts_qty"]));
   $("highMl").value = toNum(getVal(data, ["meubles_hauts_ml","highMl","hauts_ml"]));
   $("baseQty").value = toNum(getVal(data, ["meubles_bas_qty","baseQty","bas_qty"]));
-  $("baseMl").value = toNum(getVal(data, ["meubles_bas_ml","baseMl","bas_ml"]));
+  resetMetricAdjustmentsFromData(data);
+  $("baseMl").value = metricAdjustState.officialBaseMl || "";
   $("islandQty").value = toNum(getVal(data, ["ilot_qty","islandQty","ilotQty"]));
   $("islandMl").value = toNum(getVal(data, ["ilot_ml","islandMl","ilotMl"]));
   $("columnQty").value = toNum(getVal(data, ["colonnes_qty","columnQty","colonnesQty"]));
@@ -1253,6 +1358,8 @@ $("printDetail").addEventListener("click",()=>printOne("detail"));
 $("printClient").addEventListener("click",()=>printOne("client"));
 $("previewSelect").addEventListener("change", showPreview);
 $("quoteType").addEventListener("change", refresh);
+$("toggleCornerVoidBtn")?.addEventListener("click", ()=>{ metricAdjustState.removeCornerVoid = !metricAdjustState.removeCornerVoid; applyMetricAdjustments(); });
+$("toggleApplianceMlBtn")?.addEventListener("click", ()=>{ metricAdjustState.removeApplianceMl = !metricAdjustState.removeApplianceMl; applyMetricAdjustments(); });
 document.querySelectorAll("input,select,textarea").forEach(el=>{ el.addEventListener("input",refresh); el.addEventListener("change",refresh); });
 refresh();
 </script>
