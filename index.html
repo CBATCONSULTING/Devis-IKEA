@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Générateur devis cuisine IKEA - V7.17</title>
+<title>Générateur devis cuisine IKEA - V7.19</title>
 <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="shortcut icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
@@ -24,7 +24,10 @@ main{max-width:1430px;margin:18px auto;padding:0 16px 80px;display:grid;grid-tem
 .row label{font-size:13px;font-weight:800;color:#334155}
 input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:9px;padding:8px 10px;font-size:14px}
 textarea{min-height:115px;font-family:Consolas,monospace;font-size:12px;resize:vertical}
-.mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 8px}
+.metric-field{display:flex;flex-direction:column;gap:4px}
+.metric-field span{font-size:12px;font-weight:900;color:#334155;padding-left:4px;line-height:1.15}
+.metric-field input{width:100%;box-sizing:border-box}
 button{border:0;border-radius:12px;padding:11px 14px;font-weight:900;cursor:pointer;background:#2563eb;color:#fff}
 button.green{background:#16a34a}
 button.gray{background:#e2e8f0;color:#111}
@@ -225,13 +228,15 @@ body.license-mode-ikea .ikea-auto-zone-row{
 .metric-adjustments .adjust-status{font-size:12px;font-weight:900;color:#9a3412;margin-top:6px}
 body.license-mode-ikea .metric-adjustments{display:none!important}
 
+/* V7.19 : labels persistants au-dessus des champs métrés devis */
+
 </style>
 </head>
 <body>
 <header class="app">
   <h1>Générateur devis cuisine IKEA</h1>
   <div class="header-actions">
-    <span id="appVersionBadge">V7.18 | API en attente | Moteur en attente</span>
+    <span id="appVersionBadge">V7.19 | API en attente | Moteur en attente</span>
     <div id="authUserLabel" class="auth-pill hidden">Non connecté</div>
     <button id="logoutBtn" class="logout-btn hidden" type="button">Déconnexion</button>
   </div>
@@ -300,16 +305,23 @@ body.license-mode-ikea .metric-adjustments{display:none!important}
 </div>
 
 <h2 id="metricsTitle" style="margin:15px -14px 11px">3) Métrés devis</h2>
-<div class="mini-grid">
-<input id="highQty" type="number" step="1" placeholder="Qté hauts"><input id="highMl" type="number" step="0.01" placeholder="ML hauts">
-<input id="baseQty" type="number" step="1" placeholder="Qté bas"><input id="baseMl" type="number" step="0.01" placeholder="ML bas">
-<input id="islandQty" type="number" step="1" placeholder="Qté îlot"><input id="islandMl" type="number" step="0.01" placeholder="ML îlot">
-<input id="columnQty" type="number" step="1" placeholder="Qté colonnes"><input id="columnMl" type="number" step="0.01" placeholder="ML colonnes">
-<input id="readyMl" type="number" step="0.01" placeholder="Plan PàP"><input id="customMl" type="number" step="0.01" placeholder="Plan SM">
-<input id="backsplashMl" type="number" step="0.01" placeholder="Crédence"><input id="appliancesQty" type="number" step="1" placeholder="Électros">
-<input id="lightsQty" type="number" step="1" placeholder="Luminaires"><input id="sinkQty" type="number" step="1" placeholder="Évier/mitigeur">
-<input id="wasteQty" type="hidden" value="1"><input id="travelFee" type="hidden" value="50" readonly>
+<div class="mini-grid metres-grid">
+  <label class="metric-field" for="highQty"><span>Qté hauts</span><input id="highQty" type="number" step="1" placeholder="Qté hauts"></label>
+  <label class="metric-field" for="highMl"><span>ML hauts</span><input id="highMl" type="number" step="0.01" placeholder="ML hauts"></label>
+  <label class="metric-field" for="baseQty"><span>Qté bas</span><input id="baseQty" type="number" step="1" placeholder="Qté bas"></label>
+  <label class="metric-field" for="baseMl"><span>ML bas</span><input id="baseMl" type="number" step="0.01" placeholder="ML bas"></label>
+  <label class="metric-field" for="islandQty"><span>Qté îlot</span><input id="islandQty" type="number" step="1" placeholder="Qté îlot"></label>
+  <label class="metric-field" for="islandMl"><span>ML îlot</span><input id="islandMl" type="number" step="0.01" placeholder="ML îlot"></label>
+  <label class="metric-field" for="columnQty"><span>Qté colonnes</span><input id="columnQty" type="number" step="1" placeholder="Qté colonnes"></label>
+  <label class="metric-field" for="columnMl"><span>ML colonnes</span><input id="columnMl" type="number" step="0.01" placeholder="ML colonnes"></label>
+  <label class="metric-field" for="readyMl"><span>Plan PàP</span><input id="readyMl" type="number" step="0.01" placeholder="Plan PàP"></label>
+  <label class="metric-field" for="customMl"><span>Plan SM</span><input id="customMl" type="number" step="0.01" placeholder="Plan SM"></label>
+  <label class="metric-field" for="backsplashMl"><span>Crédence</span><input id="backsplashMl" type="number" step="0.01" placeholder="Crédence"></label>
+  <label class="metric-field" for="appliancesQty"><span>Électros</span><input id="appliancesQty" type="number" step="1" placeholder="Électros"></label>
+  <label class="metric-field" for="lightsQty"><span>Luminaires</span><input id="lightsQty" type="number" step="1" placeholder="Luminaires"></label>
+  <label class="metric-field" for="sinkQty"><span>Évier/mitigeur</span><input id="sinkQty" type="number" step="1" placeholder="Évier/mitigeur"></label>
 </div>
+<input id="wasteQty" type="hidden" value="1"><input id="travelFee" type="hidden" value="50" readonly>
 
 <div id="metricAdjustments" class="metric-adjustments hidden">
   <div class="adjust-title">Options technicien — ajustement du ML bas avant impression</div>
@@ -544,9 +556,9 @@ Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides inté
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script>
-const HTML_VERSION = "V7.18";
-const DEFAULT_ENGINE_VERSION = "V4.41-cloud-api-no-ocr";
-const DEFAULT_API_VERSION = "V1.26-secure";
+const HTML_VERSION = "V7.19";
+const DEFAULT_ENGINE_VERSION = "V4.52-cloud-api-no-ocr";
+const DEFAULT_API_VERSION = "V1.37-secure";
 const CLOUD_API_ANALYZE_URL = "https://ikea-pdf-analyzer-pntpqiubqq-ew.a.run.app/analyze";
 const CLOUD_API_LICENSE_URL = CLOUD_API_ANALYZE_URL.replace(/\/analyze$/, "/license");
 
