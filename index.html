@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Générateur devis cuisine IKEA - V7.20</title>
+<title>Générateur devis cuisine IKEA - V7.21</title>
 <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="shortcut icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
@@ -228,7 +228,7 @@ body.license-mode-ikea .ikea-auto-zone-row{
 .metric-adjustments .adjust-status{font-size:12px;font-weight:900;color:#9a3412;margin-top:6px}
 body.license-mode-ikea .metric-adjustments{display:none!important}
 
-/* V7.20 : plan spécifique quartz/verre/porcelaine neutralise plaque + évier */
+/* V7.21 : procédure IKEA pose libre sous plan = électro uniquement, pas de ML bas */
 
 </style>
 </head>
@@ -236,7 +236,7 @@ body.license-mode-ikea .metric-adjustments{display:none!important}
 <header class="app">
   <h1>Générateur devis cuisine IKEA</h1>
   <div class="header-actions">
-    <span id="appVersionBadge">V7.20 | API en attente | Moteur en attente</span>
+    <span id="appVersionBadge">V7.21 | API en attente | Moteur en attente</span>
     <div id="authUserLabel" class="auth-pill hidden">Non connecté</div>
     <button id="logoutBtn" class="logout-btn hidden" type="button">Déconnexion</button>
   </div>
@@ -556,9 +556,9 @@ Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides inté
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script>
-const HTML_VERSION = "V7.20";
-const DEFAULT_ENGINE_VERSION = "V4.56-cloud-api-no-ocr";
-const DEFAULT_API_VERSION = "V1.41-secure";
+const HTML_VERSION = "V7.21";
+const DEFAULT_ENGINE_VERSION = "V4.57-cloud-api-no-ocr";
+const DEFAULT_API_VERSION = "V1.42-secure";
 const CLOUD_API_ANALYZE_URL = "https://ikea-pdf-analyzer-pntpqiubqq-ew.a.run.app/analyze";
 const CLOUD_API_LICENSE_URL = CLOUD_API_ANALYZE_URL.replace(/\/analyze$/, "/license");
 
