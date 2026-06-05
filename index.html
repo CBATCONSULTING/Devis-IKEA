@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Générateur devis cuisine IKEA - V7.19</title>
+<title>Générateur devis cuisine IKEA - V7.20</title>
 <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="shortcut icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
@@ -228,7 +228,7 @@ body.license-mode-ikea .ikea-auto-zone-row{
 .metric-adjustments .adjust-status{font-size:12px;font-weight:900;color:#9a3412;margin-top:6px}
 body.license-mode-ikea .metric-adjustments{display:none!important}
 
-/* V7.19 : labels persistants au-dessus des champs métrés devis */
+/* V7.20 : plan spécifique quartz/verre/porcelaine neutralise plaque + évier */
 
 </style>
 </head>
@@ -236,7 +236,7 @@ body.license-mode-ikea .metric-adjustments{display:none!important}
 <header class="app">
   <h1>Générateur devis cuisine IKEA</h1>
   <div class="header-actions">
-    <span id="appVersionBadge">V7.19 | API en attente | Moteur en attente</span>
+    <span id="appVersionBadge">V7.20 | API en attente | Moteur en attente</span>
     <div id="authUserLabel" class="auth-pill hidden">Non connecté</div>
     <button id="logoutBtn" class="logout-btn hidden" type="button">Déconnexion</button>
   </div>
@@ -321,7 +321,7 @@ body.license-mode-ikea .metric-adjustments{display:none!important}
   <label class="metric-field" for="lightsQty"><span>Luminaires</span><input id="lightsQty" type="number" step="1" placeholder="Luminaires"></label>
   <label class="metric-field" for="sinkQty"><span>Évier/mitigeur</span><input id="sinkQty" type="number" step="1" placeholder="Évier/mitigeur"></label>
 </div>
-<input id="wasteQty" type="hidden" value="1"><input id="travelFee" type="hidden" value="50" readonly>
+<input id="wasteQty" type="hidden" value="1"><input id="hobQty" type="hidden" value="0"><input id="travelFee" type="hidden" value="50" readonly>
 
 <div id="metricAdjustments" class="metric-adjustments hidden">
   <div class="adjust-title">Options technicien — ajustement du ML bas avant impression</div>
@@ -556,9 +556,9 @@ Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides inté
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script>
-const HTML_VERSION = "V7.19";
-const DEFAULT_ENGINE_VERSION = "V4.52-cloud-api-no-ocr";
-const DEFAULT_API_VERSION = "V1.37-secure";
+const HTML_VERSION = "V7.20";
+const DEFAULT_ENGINE_VERSION = "V4.56-cloud-api-no-ocr";
+const DEFAULT_API_VERSION = "V1.41-secure";
 const CLOUD_API_ANALYZE_URL = "https://ikea-pdf-analyzer-pntpqiubqq-ew.a.run.app/analyze";
 const CLOUD_API_LICENSE_URL = CLOUD_API_ANALYZE_URL.replace(/\/analyze$/, "/license");
 
@@ -963,7 +963,15 @@ function updateMetricsStatus(){
   const badge = $("appVersionBadge");
   const versionInfo = badge ? ` — ${badge.textContent}` : "";
   if(hasMetrics()){
-    el.textContent = `Métrés chargés : hauts ${n("highQty")} / ${ml(n("highMl"))} ml, bas ${n("baseQty")} / ${ml(n("baseMl"))} ml, colonnes ${n("columnQty")} / ${ml(n("columnMl"))} ml, électros ${n("appliancesQty")}.${versionInfo}`;
+    let adjInfo = "";
+    if(isPlanSpecific()){
+      const h = hobQtyForPlanSpecific();
+      const sQty = n("sinkQty");
+      if(h || sQty){
+        adjInfo = ` — plan spécifique : ${h ? h + " plaque(s) retirée(s)" : "aucune plaque détectée"}, évier/mitigeur neutralisé`;
+      }
+    }
+    el.textContent = `Métrés chargés : hauts ${n("highQty")} / ${ml(n("highMl"))} ml, bas ${n("baseQty")} / ${ml(n("baseMl"))} ml, colonnes ${n("columnQty")} / ${ml(n("columnMl"))} ml, électros ${n("appliancesQty")}.${adjInfo}${versionInfo}`;
     el.style.color = "#166534";
   } else {
     el.textContent = `Aucun PDF IKEA analysé pour le moment.${versionInfo}`;
@@ -978,6 +986,18 @@ function commonData(){
     tva10:t("tva10"), date:dateFr(), pose:t("pose"), provider:t("provider"), planType:t("planType"), zone:t("zone"), store:t("store")
   };
 }
+function isPlanSpecific(){
+  return t("planType") !== "";
+}
+function hobQtyForPlanSpecific(){
+  return Math.max(0, Math.min(n("appliancesQty"), n("hobQty")));
+}
+function appliancesQtyForQuote(){
+  return Math.max(0, n("appliancesQty") - (isPlanSpecific() ? hobQtyForPlanSpecific() : 0));
+}
+function sinkQtyForQuote(){
+  return isPlanSpecific() ? 0 : n("sinkQty");
+}
 function calcComplete(){
   const z2 = $("zone").value === "Zone-002";
   const highUnit = z2 ? 89 : 79;
@@ -988,7 +1008,9 @@ function calcComplete(){
   const island = r2(n("islandMl")*baseUnit);
   const col = r2(n("columnMl")*columnUnit);
   const poseTtc = r2(high+base+island+col);
-  const planSpecial = t("planType") !== "";
+  const planSpecial = isPlanSpecific();
+  const effectiveAppliancesQty = appliancesQtyForQuote();
+  const effectiveSinkQty = sinkQtyForQuote();
   const planTtc = planSpecial ? 649 : 0;
   const totalTtc = r2(poseTtc+planTtc);
   const poseHt = r2(poseTtc/1.2), poseTva = r2(poseTtc-poseHt);
@@ -1000,10 +1022,12 @@ function calcComplete(){
   const planRecup = $("tva10").value === "OUI" ? r2(planTva/2) : 0;
   const nbCaissons = n("highQty")+n("baseQty")+n("islandQty")+n("columnQty");
   const planMl = r2(n("customMl")+n("readyMl")+n("backsplashMl"));
-  const indice = r2(nbCaissons*75 + planMl*75 + n("appliancesQty")*15 + 120);
-  return {z2,highUnit,baseUnit,columnUnit,high,base,island,col,poseTtc,planSpecial,planTtc,totalTtc,poseHt,poseTva,planHt,planTva,totalHt,totalTva,recup,poseRecup,planRecup,nbCaissons,planMl,indice};
+  const indice = r2(nbCaissons*75 + planMl*75 + effectiveAppliancesQty*15 + 120);
+  return {z2,highUnit,baseUnit,columnUnit,high,base,island,col,poseTtc,planSpecial,effectiveAppliancesQty,effectiveSinkQty,planTtc,totalTtc,poseHt,poseTva,planHt,planTva,totalHt,totalTva,recup,poseRecup,planRecup,nbCaissons,planMl,indice};
 }
 function calcCarte(){
+  const effectiveAppliancesQty = appliancesQtyForQuote();
+  const effectiveSinkQty = sinkQtyForQuote();
   const caissonTtc = r2(n("highMl")*35 + n("baseMl")*85 + n("islandMl")*85 + n("columnMl")*120);
   const defaultPlan = r2(n("readyMl")+n("customMl")+n("backsplashMl"));
   const planMl = n("cartePlanMl") || defaultPlan; // champ 26
@@ -1013,7 +1037,7 @@ function calcCarte(){
   const doorMlCalc = doorActive && planMl ? r2(n("highMl")+n("baseMl")+n("islandMl")+n("columnMl")) : 0;      // champ 32 = 13+16+19+22
   const doorMissing = doorActive && !planMl;
   const doorTtc = doorActive && !doorMissing ? r2(doorMlCalc*60) : 0; // champ 33
-  const appliancesTtc = r2(n("appliancesQty")*40);
+  const appliancesTtc = r2(effectiveAppliancesQty*40);
   const wasteTtc = r2((n("wasteQty") || 0)*150);
   const travelTtc = r2($("zone").value === "Zone-002" ? 114 : 50); // champ 62/64 selon mapping
   const mainSubtotal = r2(caissonTtc+planTtc+doorTtc+appliancesTtc+wasteTtc);
@@ -1028,9 +1052,9 @@ function calcCarte(){
   const nbCaissonsRaw = n("highQty")+n("baseQty")+n("islandQty")+n("columnQty");
   const cabPrest = r2(nbCaissonsRaw/2);       // champ 39 = (12+15+18+21)/2
   const doorPrest = r2(doorQtyCalc/2);        // champ 41 = 31/2
-  const indice = r2((cabPrest*2*45) + (planMl*75) + (doorPrest*30) + (n("appliancesQty")*15) + (n("wasteQty") ? 120 : 0)); // champ 69
-  const indiceRounded = Math.ceil((cabPrest + doorPrest + n("appliancesQty"))/4); // champ 70
-  return {caissonTtc,planMl,planTtc,doorActive,doorMissing,doorQtyCalc,doorMlCalc,doorTtc,appliancesTtc,wasteTtc,travelTtc,mainSubtotal,totalTtc,caisson,plan,door,appl,waste,travel,total,caissonRecup,planRecup,doorRecup,totalRecup,cabPrest,doorPrest,indice,indiceRounded};
+  const indice = r2((cabPrest*2*45) + (planMl*75) + (doorPrest*30) + (effectiveAppliancesQty*15) + (n("wasteQty") ? 120 : 0)); // champ 69
+  const indiceRounded = Math.ceil((cabPrest + doorPrest + effectiveAppliancesQty)/4); // champ 70
+  return {caissonTtc,planMl,planTtc,doorActive,doorMissing,doorQtyCalc,doorMlCalc,doorTtc,effectiveAppliancesQty,effectiveSinkQty,appliancesTtc,wasteTtc,travelTtc,mainSubtotal,totalTtc,caisson,plan,door,appl,waste,travel,total,caissonRecup,planRecup,doorRecup,totalRecup,cabPrest,doorPrest,indice,indiceRounded};
 }
 function refreshComplete(){
   const c = calcComplete(), d = commonData();
@@ -1040,18 +1064,18 @@ function refreshComplete(){
   set("d_baseQty",n("baseQty")); set("d_baseUnit",c.baseUnit+" €"); set("d_baseMl",ml(n("baseMl"))); set("d_baseTtc",money(c.base));
   set("d_islandQty",n("islandQty")); set("d_islandUnit",c.baseUnit+" €"); set("d_islandMl",ml(n("islandMl"))); set("d_islandTtc",moneyOrDash(c.island));
   set("d_columnQty",n("columnQty")); set("d_columnUnit",c.columnUnit+" €"); set("d_columnMl",ml(n("columnMl"))); set("d_columnTtc",money(c.col));
-  set("d_sinkQty",n("sinkQty")); set("d_lightsQty",n("lightsQty")); set("d_wasteQty",n("wasteQty")||1);
+  set("d_sinkQty",c.effectiveSinkQty); set("d_lightsQty",n("lightsQty")); set("d_wasteQty",n("wasteQty")||1);
   set("d_subtotalMeubles",money(c.poseTtc)); set("d_nbCaissons",c.nbCaissons); set("d_wastePrest",n("wasteQty")||1);
   set("d_customMl",ml(n("customMl"))); set("d_readyMl",ml(n("readyMl"))); set("d_backsplashMl",ml(n("backsplashMl")));
   set("d_nerosteinLabel", c.planSpecial ? "Plan de travail / Crédence Nerostein" : "");
   set("d_nerosteinTtcShort", c.planSpecial ? money(c.planTtc) : "");
   set("d_subtotalPlan", c.planSpecial ? money(c.planTtc) : "inclus");
   set("d_planTotalMl", ml(c.planMl));
-  set("d_appliancesQty", n("appliancesQty")); set("d_appliancesPrest", n("appliancesQty"));
+  set("d_appliancesQty", c.effectiveAppliancesQty); set("d_appliancesPrest", c.effectiveAppliancesQty);
   set("d_poseHt", money(c.poseHt)); set("d_poseTva", money(c.poseTva)); set("d_poseTtc", money(c.poseTtc)); set("d_poseRecup", money(c.poseRecup));
   set("d_planHt", c.planSpecial ? money(c.planHt) : "inclus"); set("d_planTva", c.planSpecial ? money(c.planTva) : "inclus"); set("d_planTtc", c.planSpecial ? money(c.planTtc) : "inclus"); set("d_planRecup", c.planSpecial ? money(c.planRecup) : "");
   set("d_totalHt", money(c.totalHt)); set("d_totalTva", money(c.totalTva)); set("d_totalTtc", money(c.totalTtc)); set("d_totalRecup", money(c.recup));
-  set("d_indicePose", ml(c.indice)); set("d_indicePoseRounded", Math.ceil((c.nbCaissons + n("appliancesQty")) / 4));
+  set("d_indicePose", ml(c.indice)); set("d_indicePoseRounded", Math.ceil((c.nbCaissons + c.effectiveAppliancesQty) / 4));
   set("cc_date",d.date); set("cc_store",d.store); set("cc_clientName",d.clientName); set("cc_clientAddress",d.clientAddress); set("cc_clientPhone",d.clientPhone); set("cc_clientEmail",d.clientEmail);
   set("cc_totalHt", money(c.totalHt)); set("cc_totalTva", money(c.totalTva)); set("cc_totalTtc", money(c.totalTtc)); set("cc_totalRecup", money(c.recup));
   const redIds = ["d_planType","d_nerosteinLabel","d_nerosteinTtcShort","d_subtotalPlan","d_planHt","d_planTva","d_planTtc","d_planRecup"];
@@ -1066,7 +1090,7 @@ function refreshCarte(){
   set("cd_islandQty",n("islandQty")); set("cd_islandMl",ml(n("islandMl"))); set("cd_islandTtc",moneyOrDash(n("islandMl")*85));
   set("cd_columnQty",n("columnQty")); set("cd_columnMl",ml(n("columnMl"))); set("cd_columnTtc",money(n("columnMl")*120));
   set("cd_lightsQty",n("lightsQty")); set("cd_lightsUnit",n("lightsQty")); set("cd_cartePlanMl",ml(c.planMl)); set("cd_planTtc",money(c.planTtc));
-  set("cd_sinkQty",n("sinkQty")); set("cd_sinkUnit",n("sinkQty")); 
+  set("cd_sinkQty",c.effectiveSinkQty); set("cd_sinkUnit",c.effectiveSinkQty); 
   $("doorQty").value = c.doorActive && !c.doorMissing ? c.doorQtyCalc : "";
   $("doorMl").value = c.doorActive && !c.doorMissing ? c.doorMlCalc : "";
   $("carteCabCount").value = c.cabPrest || "";
@@ -1075,8 +1099,8 @@ function refreshCarte(){
   set("cd_doorQty",c.doorActive ? (c.doorMissing ? "Impossible" : c.doorQtyCalc) : ""); 
   set("cd_doorMl",c.doorActive ? (c.doorMissing ? "Impossible" : ml(c.doorMlCalc)) : ""); 
   set("cd_doorTtc",c.doorActive ? (c.doorMissing ? "Impossible" : money(c.doorTtc)) : money(0));
-  set("cd_appliancesQty",n("appliancesQty")); set("cd_appliancesTtc",money(c.appliancesTtc)); set("cd_wasteQty",n("wasteQty")); set("cd_wasteTtc",money(c.wasteTtc)); set("cd_subtotalMain",money(c.mainSubtotal));
-  set("cd_carteCabCount",ml(c.cabPrest)); set("cd_cartePlanPrest",ml(c.planMl)); set("cd_doorPrest",n("doorQty")); set("cd_appliancesPrest",n("appliancesQty")); set("cd_wastePrest",n("wasteQty"));
+  set("cd_appliancesQty",c.effectiveAppliancesQty); set("cd_appliancesTtc",money(c.appliancesTtc)); set("cd_wasteQty",n("wasteQty")); set("cd_wasteTtc",money(c.wasteTtc)); set("cd_subtotalMain",money(c.mainSubtotal));
+  set("cd_carteCabCount",ml(c.cabPrest)); set("cd_cartePlanPrest",ml(c.planMl)); set("cd_doorPrest",n("doorQty")); set("cd_appliancesPrest",c.effectiveAppliancesQty); set("cd_wastePrest",n("wasteQty"));
   set("cd_caissonHt",money(c.caisson.ht)); set("cd_caissonTva",money(c.caisson.tva)); set("cd_caissonTtc",money(c.caisson.ttc)); set("cd_caissonRecup",money(c.caissonRecup));
   set("cd_planHt",money(c.plan.ht)); set("cd_planTva",money(c.plan.tva)); set("cd_planTtc2",money(c.plan.ttc)); set("cd_planRecup",money(c.planRecup));
   set("cd_doorHt",money(c.door.ht)); set("cd_doorTva",money(c.door.tva)); set("cd_doorTtc2",money(c.door.ttc)); set("cd_doorRecup",money(c.doorRecup));
@@ -1126,6 +1150,7 @@ function loadData(data){
   $("customMl").value = toNum(getVal(data, ["plan_travail_sur_mesure_ml","customMl","plan_sur_mesure_ml"]));
   $("backsplashMl").value = toNum(getVal(data, ["credence_ml","backsplashMl"]));
   $("appliancesQty").value = toNum(getVal(data, ["electromenagers_qty","appliancesQty","electros"]));
+  $("hobQty").value = toNum(getVal(data, ["electromenagers_plaque_qty","plaques_cuisson_qty","plaque_cuisson_qty","hobQty","hob_qty"]));
   $("lightsQty").value = toNum(getVal(data, ["luminaires_qty","lightsQty","luminaires"]));
   $("sinkQty").value = toNum(getVal(data, ["evier_mitigeur_qty","sinkQty","evier"]));
   $("wasteQty").value = toNum(getVal(data, ["dechets_qty","wasteQty","dechets"])) || 1;
