@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Générateur devis cuisine IKEA - V7.21</title>
+<title>Générateur devis cuisine IKEA - V7.22</title>
 <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="shortcut icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
@@ -22,6 +22,8 @@ main{max-width:1430px;margin:18px auto;padding:0 16px 80px;display:grid;grid-tem
 .hidden{display:none!important}
 .row{display:grid;grid-template-columns:150px 1fr;gap:9px;align-items:center;margin-bottom:8px}
 .row label{font-size:13px;font-weight:800;color:#334155}
+.check-inline{display:flex!important;align-items:center;gap:8px;font-weight:800;color:#334155}
+.check-inline input{width:auto;min-width:18px;height:18px}
 input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:9px;padding:8px 10px;font-size:14px}
 textarea{min-height:115px;font-family:Consolas,monospace;font-size:12px;resize:vertical}
 .mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 8px}
@@ -228,7 +230,7 @@ body.license-mode-ikea .ikea-auto-zone-row{
 .metric-adjustments .adjust-status{font-size:12px;font-weight:900;color:#9a3412;margin-top:6px}
 body.license-mode-ikea .metric-adjustments{display:none!important}
 
-/* V7.21 : procédure IKEA pose libre sous plan = électro uniquement, pas de ML bas */
+/* V7.22 : option 5 déchets décochable sur devis installation à la carte */
 
 </style>
 </head>
@@ -236,7 +238,7 @@ body.license-mode-ikea .metric-adjustments{display:none!important}
 <header class="app">
   <h1>Générateur devis cuisine IKEA</h1>
   <div class="header-actions">
-    <span id="appVersionBadge">V7.21 | API en attente | Moteur en attente</span>
+    <span id="appVersionBadge">V7.22 | API en attente | Moteur en attente</span>
     <div id="authUserLabel" class="auth-pill hidden">Non connecté</div>
     <button id="logoutBtn" class="logout-btn hidden" type="button">Déconnexion</button>
   </div>
@@ -273,6 +275,7 @@ body.license-mode-ikea .metric-adjustments{display:none!important}
   <div class="row"><label>ML plan + crédence</label><input id="cartePlanMl" type="number" step="0.01" placeholder="Ex : 5,00"></div>
   <div class="row"><label>Nb caissons prestataire</label><input id="carteCabCount" type="number" step="0.01" placeholder="Calculé automatiquement" readonly></div>
   <div id="doorHint" class="note mini-note">Si “Pose portes/tiroirs” = OUI, renseigner le nombre et le ML : le devis se recalcule immédiatement.</div>
+  <div class="row"><label>Option 5 déchets</label><label class="check-inline" for="wasteActive"><input id="wasteActive" type="checkbox" checked> Enlèvement des déchets</label></div>
 </div>
 
 <div class="row"><label>Nom client</label><input id="clientName"></div>
@@ -337,7 +340,7 @@ body.license-mode-ikea .metric-adjustments{display:none!important}
 </div>
 
 <div class="note">
-Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides intégrés + électros intégrés + électros en pose libre placés dans le linéaire.
+Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides intégrés + électros intégrés. Les électroménagers en pose libre sous plan ne sont plus ajoutés au ML bas ; ils sont comptés uniquement en unités électroménagers si la prestation est à faire.
 </div>
 
 <div class="btns">
@@ -556,7 +559,7 @@ Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides inté
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script>
-const HTML_VERSION = "V7.21";
+const HTML_VERSION = "V7.22";
 const DEFAULT_ENGINE_VERSION = "V4.57-cloud-api-no-ocr";
 const DEFAULT_API_VERSION = "V1.42-secure";
 const CLOUD_API_ANALYZE_URL = "https://ikea-pdf-analyzer-pntpqiubqq-ew.a.run.app/analyze";
@@ -971,7 +974,8 @@ function updateMetricsStatus(){
         adjInfo = ` — plan spécifique : ${h ? h + " plaque(s) retirée(s)" : "aucune plaque détectée"}, évier/mitigeur neutralisé`;
       }
     }
-    el.textContent = `Métrés chargés : hauts ${n("highQty")} / ${ml(n("highMl"))} ml, bas ${n("baseQty")} / ${ml(n("baseMl"))} ml, colonnes ${n("columnQty")} / ${ml(n("columnMl"))} ml, électros ${n("appliancesQty")}.${adjInfo}${versionInfo}`;
+    const wasteInfo = ($("quoteType")?.value === "carte" && $("wasteActive") && !$("wasteActive").checked) ? " — option 5 déchets décochée" : "";
+    el.textContent = `Métrés chargés : hauts ${n("highQty")} / ${ml(n("highMl"))} ml, bas ${n("baseQty")} / ${ml(n("baseMl"))} ml, colonnes ${n("columnQty")} / ${ml(n("columnMl"))} ml, électros ${n("appliancesQty")}.${adjInfo}${wasteInfo}${versionInfo}`;
     el.style.color = "#166534";
   } else {
     el.textContent = `Aucun PDF IKEA analysé pour le moment.${versionInfo}`;
@@ -997,6 +1001,10 @@ function appliancesQtyForQuote(){
 }
 function sinkQtyForQuote(){
   return isPlanSpecific() ? 0 : n("sinkQty");
+}
+function wasteQtyForCarte(){
+  const el = $("wasteActive");
+  return el && el.checked ? 1 : 0;
 }
 function calcComplete(){
   const z2 = $("zone").value === "Zone-002";
@@ -1038,7 +1046,8 @@ function calcCarte(){
   const doorMissing = doorActive && !planMl;
   const doorTtc = doorActive && !doorMissing ? r2(doorMlCalc*60) : 0; // champ 33
   const appliancesTtc = r2(effectiveAppliancesQty*40);
-  const wasteTtc = r2((n("wasteQty") || 0)*150);
+  const wasteQty = wasteQtyForCarte();
+  const wasteTtc = r2(wasteQty*150);
   const travelTtc = r2($("zone").value === "Zone-002" ? 114 : 50); // champ 62/64 selon mapping
   const mainSubtotal = r2(caissonTtc+planTtc+doorTtc+appliancesTtc+wasteTtc);
   const totalTtc = r2(mainSubtotal+travelTtc);
@@ -1052,9 +1061,9 @@ function calcCarte(){
   const nbCaissonsRaw = n("highQty")+n("baseQty")+n("islandQty")+n("columnQty");
   const cabPrest = r2(nbCaissonsRaw/2);       // champ 39 = (12+15+18+21)/2
   const doorPrest = r2(doorQtyCalc/2);        // champ 41 = 31/2
-  const indice = r2((cabPrest*2*45) + (planMl*75) + (doorPrest*30) + (effectiveAppliancesQty*15) + (n("wasteQty") ? 120 : 0)); // champ 69
+  const indice = r2((cabPrest*2*45) + (planMl*75) + (doorPrest*30) + (effectiveAppliancesQty*15) + (wasteQty ? 120 : 0)); // champ 69
   const indiceRounded = Math.ceil((cabPrest + doorPrest + effectiveAppliancesQty)/4); // champ 70
-  return {caissonTtc,planMl,planTtc,doorActive,doorMissing,doorQtyCalc,doorMlCalc,doorTtc,effectiveAppliancesQty,effectiveSinkQty,appliancesTtc,wasteTtc,travelTtc,mainSubtotal,totalTtc,caisson,plan,door,appl,waste,travel,total,caissonRecup,planRecup,doorRecup,totalRecup,cabPrest,doorPrest,indice,indiceRounded};
+  return {caissonTtc,planMl,planTtc,doorActive,doorMissing,doorQtyCalc,doorMlCalc,doorTtc,effectiveAppliancesQty,effectiveSinkQty,appliancesTtc,wasteQty,wasteTtc,travelTtc,mainSubtotal,totalTtc,caisson,plan,door,appl,waste,travel,total,caissonRecup,planRecup,doorRecup,totalRecup,cabPrest,doorPrest,indice,indiceRounded};
 }
 function refreshComplete(){
   const c = calcComplete(), d = commonData();
@@ -1099,8 +1108,8 @@ function refreshCarte(){
   set("cd_doorQty",c.doorActive ? (c.doorMissing ? "Impossible" : c.doorQtyCalc) : ""); 
   set("cd_doorMl",c.doorActive ? (c.doorMissing ? "Impossible" : ml(c.doorMlCalc)) : ""); 
   set("cd_doorTtc",c.doorActive ? (c.doorMissing ? "Impossible" : money(c.doorTtc)) : money(0));
-  set("cd_appliancesQty",c.effectiveAppliancesQty); set("cd_appliancesTtc",money(c.appliancesTtc)); set("cd_wasteQty",n("wasteQty")); set("cd_wasteTtc",money(c.wasteTtc)); set("cd_subtotalMain",money(c.mainSubtotal));
-  set("cd_carteCabCount",ml(c.cabPrest)); set("cd_cartePlanPrest",ml(c.planMl)); set("cd_doorPrest",n("doorQty")); set("cd_appliancesPrest",c.effectiveAppliancesQty); set("cd_wastePrest",n("wasteQty"));
+  set("cd_appliancesQty",c.effectiveAppliancesQty); set("cd_appliancesTtc",money(c.appliancesTtc)); set("cd_wasteQty",c.wasteQty); set("cd_wasteTtc",money(c.wasteTtc)); set("cd_subtotalMain",money(c.mainSubtotal));
+  set("cd_carteCabCount",ml(c.cabPrest)); set("cd_cartePlanPrest",ml(c.planMl)); set("cd_doorPrest",n("doorQty")); set("cd_appliancesPrest",c.effectiveAppliancesQty); set("cd_wastePrest",c.wasteQty);
   set("cd_caissonHt",money(c.caisson.ht)); set("cd_caissonTva",money(c.caisson.tva)); set("cd_caissonTtc",money(c.caisson.ttc)); set("cd_caissonRecup",money(c.caissonRecup));
   set("cd_planHt",money(c.plan.ht)); set("cd_planTva",money(c.plan.tva)); set("cd_planTtc2",money(c.plan.ttc)); set("cd_planRecup",money(c.planRecup));
   set("cd_doorHt",money(c.door.ht)); set("cd_doorTva",money(c.door.tva)); set("cd_doorTtc2",money(c.door.ttc)); set("cd_doorRecup",money(c.doorRecup));
