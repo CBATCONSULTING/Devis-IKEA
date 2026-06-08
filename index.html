@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Générateur devis cuisine IKEA - V7.22</title>
+<title>Générateur devis cuisine IKEA - V7.23</title>
 <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="shortcut icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
@@ -230,7 +230,7 @@ body.license-mode-ikea .ikea-auto-zone-row{
 .metric-adjustments .adjust-status{font-size:12px;font-weight:900;color:#9a3412;margin-top:6px}
 body.license-mode-ikea .metric-adjustments{display:none!important}
 
-/* V7.22 : option 5 déchets décochable sur devis installation à la carte */
+/* V7.23 : options pose à la carte simplifiées, valeurs reprises depuis les métrés devis */
 
 </style>
 </head>
@@ -238,7 +238,7 @@ body.license-mode-ikea .metric-adjustments{display:none!important}
 <header class="app">
   <h1>Générateur devis cuisine IKEA</h1>
   <div class="header-actions">
-    <span id="appVersionBadge">V7.22 | API en attente | Moteur en attente</span>
+    <span id="appVersionBadge">V7.23 | API en attente | Moteur en attente</span>
     <div id="authUserLabel" class="auth-pill hidden">Non connecté</div>
     <button id="logoutBtn" class="logout-btn hidden" type="button">Déconnexion</button>
   </div>
@@ -272,9 +272,9 @@ body.license-mode-ikea .metric-adjustments{display:none!important}
   <div class="row door-row"><label>Nb portes/tiroirs/aménag.</label><input id="doorQty" type="number" step="1" placeholder="Calculé automatiquement" readonly></div>
   <div class="row door-row"><label>ML portes/tiroirs</label><input id="doorMl" type="number" step="0.01" placeholder="Calculé automatiquement" readonly></div>
 
-  <div class="row"><label>ML plan + crédence</label><input id="cartePlanMl" type="number" step="0.01" placeholder="Ex : 5,00"></div>
-  <div class="row"><label>Nb caissons prestataire</label><input id="carteCabCount" type="number" step="0.01" placeholder="Calculé automatiquement" readonly></div>
-  <div id="doorHint" class="note mini-note">Si “Pose portes/tiroirs” = OUI, renseigner le nombre et le ML : le devis se recalcule immédiatement.</div>
+  <div class="row hidden"><label>ML plan + crédence</label><input id="cartePlanMl" type="number" step="0.01" placeholder="Calculé depuis les métrés devis"></div>
+  <div class="row hidden"><label>Nb caissons prestataire</label><input id="carteCabCount" type="number" step="0.01" placeholder="Calculé automatiquement" readonly></div>
+  <div id="doorHint" class="note mini-note">Les valeurs à la carte sont reprises automatiquement depuis “3) Métrés devis”.</div>
   <div class="row"><label>Option 5 déchets</label><label class="check-inline" for="wasteActive"><input id="wasteActive" type="checkbox" checked> Enlèvement des déchets</label></div>
 </div>
 
@@ -559,7 +559,7 @@ Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides inté
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script>
-const HTML_VERSION = "V7.22";
+const HTML_VERSION = "V7.23";
 const DEFAULT_ENGINE_VERSION = "V4.57-cloud-api-no-ocr";
 const DEFAULT_API_VERSION = "V1.42-secure";
 const CLOUD_API_ANALYZE_URL = "https://ikea-pdf-analyzer-pntpqiubqq-ew.a.run.app/analyze";
@@ -1038,7 +1038,7 @@ function calcCarte(){
   const effectiveSinkQty = sinkQtyForQuote();
   const caissonTtc = r2(n("highMl")*35 + n("baseMl")*85 + n("islandMl")*85 + n("columnMl")*120);
   const defaultPlan = r2(n("readyMl")+n("customMl")+n("backsplashMl"));
-  const planMl = n("cartePlanMl") || defaultPlan; // champ 26
+  const planMl = defaultPlan; // champ 26 : repris automatiquement depuis 3) Métrés devis
   const planTtc = r2(planMl*60);                  // champ 27
   const doorActive = t("doorActive") === "OUI";   // champ 30
   const doorQtyCalc = doorActive && planMl ? r2(n("highQty")+n("baseQty")+n("islandQty")+n("columnQty")) : 0; // champ 31 = 12+15+18+21
@@ -1102,6 +1102,7 @@ function refreshCarte(){
   set("cd_sinkQty",c.effectiveSinkQty); set("cd_sinkUnit",c.effectiveSinkQty); 
   $("doorQty").value = c.doorActive && !c.doorMissing ? c.doorQtyCalc : "";
   $("doorMl").value = c.doorActive && !c.doorMissing ? c.doorMlCalc : "";
+  $("cartePlanMl").value = c.planMl || "";
   $("carteCabCount").value = c.cabPrest || "";
   $("travelFee").value = c.travelTtc || "";
   set("cd_doorActive",c.doorActive?"OUI":""); 
@@ -1122,8 +1123,8 @@ function refreshCarte(){
   if(hint){
     hint.classList.toggle("danger-note", !!c.doorMissing);
     hint.textContent = c.doorMissing 
-      ? "Pose portes/tiroirs = OUI impossible : le champ 26 (ML plan + crédence) vaut 0. Mapping : impossible sans option 1 ET 2."
-      : "Pose portes/tiroirs : valeurs calculées automatiquement selon le mapping : champ 31 = 12+15+18+21 et champ 32 = 13+16+19+22.";
+      ? "Pose portes/tiroirs = OUI impossible : le total Plan PàP + Plan SM + Crédence vaut 0."
+      : "Les valeurs à la carte sont reprises automatiquement depuis “3) Métrés devis”.";
   }
   set("cd_indicePose",ml(c.indice)); set("cd_indicePoseRounded",c.indiceRounded);
   set("kc_date",d.date); set("kc_store",d.store); set("kc_clientName",d.clientName); set("kc_clientAddress",d.clientAddress); set("kc_clientPhone",d.clientPhone); set("kc_clientEmail",d.clientEmail);
@@ -1163,9 +1164,9 @@ function loadData(data){
   $("lightsQty").value = toNum(getVal(data, ["luminaires_qty","lightsQty","luminaires"]));
   $("sinkQty").value = toNum(getVal(data, ["evier_mitigeur_qty","sinkQty","evier"]));
   $("wasteQty").value = toNum(getVal(data, ["dechets_qty","wasteQty","dechets"])) || 1;
-  // Valeurs à la carte : préremplissage raisonnable, modifiable.
+  // Valeurs à la carte : reprises automatiquement depuis les métrés devis.
   const planDefault = r2(toNum(getVal(data, ["plan_travail_pret_ml","readyMl","plan_pret_ml"])) + toNum(getVal(data, ["plan_travail_sur_mesure_ml","customMl","plan_sur_mesure_ml"])) + toNum(getVal(data, ["credence_ml","backsplashMl"])));
-  if(!$("cartePlanMl").value) $("cartePlanMl").value = planDefault || "";
+  $("cartePlanMl").value = planDefault || "";
   refresh();
   $("status").textContent = hasMetrics() ? "PDF analysé avec métrés." : "PDF analysé, mais aucun métré détecté.";
 }
@@ -1306,8 +1307,8 @@ function pageIdsForCurrent(){
 }
 function validateBeforePrint(){
   refresh();
-  if($("quoteType").value === "carte" && t("doorActive") === "OUI" && !(n("cartePlanMl") || n("readyMl") || n("customMl") || n("backsplashMl"))){
-    alert("Pose portes/tiroirs = OUI impossible : le champ ML plan + crédence vaut 0. Mapping : impossible sans Options 1 ET 2.");
+  if($("quoteType").value === "carte" && t("doorActive") === "OUI" && !(n("readyMl") || n("customMl") || n("backsplashMl"))){
+    alert("Pose portes/tiroirs = OUI impossible : le total Plan PàP + Plan SM + Crédence vaut 0.");
     return false;
   }
   if(!hasMetrics()){
