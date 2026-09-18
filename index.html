@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Outils Challenge Bat - Générateur devis IKEA - V7.24</title>
+<title>Outils Challenge Bat - Générateur devis IKEA - V7.25</title>
 <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="shortcut icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
@@ -243,6 +243,7 @@ body.license-mode-ikea .metric-adjustments{display:none!important}
 
 /* V7.23 : options pose à la carte simplifiées, valeurs reprises depuis les métrés devis */
 /* V7.24 : portail Outils Challenge Bat + navigation vers la check-list */
+/* V7.25 : portail multi-outils et ouverture de chaque outil dans un nouvel onglet */
 
 </style>
 </head>
@@ -251,7 +252,7 @@ body.license-mode-ikea .metric-adjustments{display:none!important}
   <h1>Générateur devis cuisine IKEA</h1>
   <div class="header-actions">
     <button id="portalBtn" class="portal-nav-btn hidden" type="button">Outils</button>
-    <span id="appVersionBadge">V7.24 | API en attente | Moteur en attente</span>
+    <span id="appVersionBadge">V7.25 | API en attente | Moteur en attente</span>
     <div id="authUserLabel" class="auth-pill hidden">Non connecté</div>
     <button id="logoutBtn" class="logout-btn hidden" type="button">Déconnexion</button>
   </div>
@@ -273,18 +274,30 @@ body.license-mode-ikea .metric-adjustments{display:none!important}
 <section id="portalGate" class="portal-gate hidden" aria-label="Outils Challenge Bat">
   <div class="portal-card">
     <h2>Outils Challenge Bat</h2>
-    <p>Choisissez l’outil que vous souhaitez utiliser.</p>
+    <p>Choisissez l’outil que vous souhaitez utiliser. Chaque outil s’ouvre dans un nouvel onglet.</p>
     <div class="portal-tools">
-      <button id="openDevisBtn" class="portal-tool" type="button">
+      <a class="portal-tool" href="/Devis-IKEA/?open=devis" target="_blank" rel="noopener noreferrer">
         <span class="portal-icon">🧾</span>
         <strong>Générateur de devis IKEA</strong>
         <small>Analyser un PDF IKEA et générer le devis détaillé et le récapitulatif client.</small>
         <span class="portal-open">Ouvrir</span>
-      </button>
-      <a class="portal-tool" href="/Check-List-Pvman/?open=checklist">
+      </a>
+      <a class="portal-tool" href="/Check-List-Pvman/?open=checklist" target="_blank" rel="noopener noreferrer">
         <span class="portal-icon">✅</span>
         <strong>Check-list pré-visite</strong>
         <small>Renseigner les contrôles terrain et préparer les informations nécessaires au chiffrage.</small>
+        <span class="portal-open">Ouvrir</span>
+      </a>
+      <a class="portal-tool" href="https://kitchen.planner.ikea.com/fr/fr/" target="_blank" rel="noopener noreferrer">
+        <span class="portal-icon">📐</span>
+        <strong>IKEA Kitchen Planner</strong>
+        <small>Ouvrir l’outil IKEA de conception et de planification de cuisine.</small>
+        <span class="portal-open">Ouvrir</span>
+      </a>
+      <a class="portal-tool" href="https://www.myextrabat.com" target="_blank" rel="noopener noreferrer">
+        <span class="portal-icon">🏗️</span>
+        <strong>Extrabat</strong>
+        <small>Accéder à l’espace de gestion commerciale et aux dossiers clients.</small>
         <span class="portal-open">Ouvrir</span>
       </a>
     </div>
@@ -593,7 +606,7 @@ Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides inté
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script>
-const HTML_VERSION = "V7.24";
+const HTML_VERSION = "V7.25";
 const DEFAULT_ENGINE_VERSION = "V4.57-cloud-api-no-ocr";
 const DEFAULT_API_VERSION = "V1.42-secure";
 const CLOUD_API_ANALYZE_URL = "https://ikea-pdf-analyzer-pntpqiubqq-ew.a.run.app/analyze";
@@ -1427,8 +1440,7 @@ window.addEventListener("afterprint", () => {
 $("loginBtn")?.addEventListener("click", loginWithEmail);
 $("loginPassword")?.addEventListener("keydown", e=>{ if(e.key === "Enter") loginWithEmail(); });
 $("logoutBtn")?.addEventListener("click", async ()=>{ await firebase.auth().signOut(); });
-$("portalBtn")?.addEventListener("click", ()=>showPortal(true));
-$("openDevisBtn")?.addEventListener("click", ()=>showPortal(false));
+$("portalBtn")?.addEventListener("click", ()=>window.open("/Devis-IKEA/?portal=1", "_blank", "noopener"));
 firebase.auth().onAuthStateChanged(async user=>{
   if(user){
     setLoggedUser(user, currentLicense);
