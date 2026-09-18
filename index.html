@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Générateur devis cuisine IKEA - V7.23</title>
+<title>Outils Challenge Bat - Générateur devis IKEA - V7.24</title>
 <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="shortcut icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
@@ -184,7 +184,18 @@ input[readonly]{
 .auth-msg{font-size:13px;font-weight:800;margin-top:10px;min-height:18px;color:#b45309}
 .auth-msg.ok{color:#166534}
 .auth-msg.err{color:#b91c1c}
-@media print{.auth-gate,.auth-pill,.logout-btn{display:none!important}}
+.portal-gate{position:fixed;inset:0;z-index:999998;background:linear-gradient(135deg,#e8eef8,#f8fafc);display:flex;align-items:center;justify-content:center;padding:20px}
+.portal-card{width:min(820px,100%);background:#fff;border:1px solid #d5dce8;border-radius:24px;box-shadow:0 20px 60px rgba(15,23,42,.18);padding:28px}
+.portal-card h2{font-size:26px;margin:0;color:#0f172a}
+.portal-card>p{color:#64748b;margin:8px 0 22px}
+.portal-tools{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.portal-tool{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:12px;min-height:170px;padding:20px;border:1px solid #cbd5e1;border-radius:18px;background:#f8fafc;color:#0f172a;text-decoration:none;cursor:pointer;transition:.15s ease}
+.portal-tool:hover{transform:translateY(-2px);border-color:#60a5fa;box-shadow:0 12px 25px rgba(37,99,235,.12)}
+.portal-icon{font-size:34px}.portal-tool strong{font-size:18px}.portal-tool small{font-size:13px;line-height:1.4;color:#64748b}
+.portal-open{display:inline-flex;background:#2563eb;color:#fff;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:900}
+.portal-nav-btn{background:#334155!important;color:#fff!important;border-radius:999px!important;padding:7px 11px!important;font-size:12px!important}
+@media(max-width:650px){.portal-tools{grid-template-columns:1fr}.portal-card{padding:20px}.portal-tool{min-height:140px}}
+@media print{.auth-gate,.portal-gate,.auth-pill,.logout-btn,.portal-nav-btn{display:none!important}}
 
 /* V7.14 : modes licence + prestataire automatique via licence */
 body.license-mode-ikea .indice,
@@ -231,6 +242,7 @@ body.license-mode-ikea .ikea-auto-zone-row{
 body.license-mode-ikea .metric-adjustments{display:none!important}
 
 /* V7.23 : options pose à la carte simplifiées, valeurs reprises depuis les métrés devis */
+/* V7.24 : portail Outils Challenge Bat + navigation vers la check-list */
 
 </style>
 </head>
@@ -238,7 +250,8 @@ body.license-mode-ikea .metric-adjustments{display:none!important}
 <header class="app">
   <h1>Générateur devis cuisine IKEA</h1>
   <div class="header-actions">
-    <span id="appVersionBadge">V7.23 | API en attente | Moteur en attente</span>
+    <button id="portalBtn" class="portal-nav-btn hidden" type="button">Outils</button>
+    <span id="appVersionBadge">V7.24 | API en attente | Moteur en attente</span>
     <div id="authUserLabel" class="auth-pill hidden">Non connecté</div>
     <button id="logoutBtn" class="logout-btn hidden" type="button">Déconnexion</button>
   </div>
@@ -254,6 +267,27 @@ body.license-mode-ikea .metric-adjustments{display:none!important}
     <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Mot de passe">
     <button id="loginBtn" type="button" class="green">Se connecter</button>
     <div id="authMessage" class="auth-msg">Vérification de la session...</div>
+  </div>
+</section>
+
+<section id="portalGate" class="portal-gate hidden" aria-label="Outils Challenge Bat">
+  <div class="portal-card">
+    <h2>Outils Challenge Bat</h2>
+    <p>Choisissez l’outil que vous souhaitez utiliser.</p>
+    <div class="portal-tools">
+      <button id="openDevisBtn" class="portal-tool" type="button">
+        <span class="portal-icon">🧾</span>
+        <strong>Générateur de devis IKEA</strong>
+        <small>Analyser un PDF IKEA et générer le devis détaillé et le récapitulatif client.</small>
+        <span class="portal-open">Ouvrir</span>
+      </button>
+      <a class="portal-tool" href="/Check-List-Pvman/?open=checklist">
+        <span class="portal-icon">✅</span>
+        <strong>Check-list pré-visite</strong>
+        <small>Renseigner les contrôles terrain et préparer les informations nécessaires au chiffrage.</small>
+        <span class="portal-open">Ouvrir</span>
+      </a>
+    </div>
   </div>
 </section>
 
@@ -559,7 +593,7 @@ Rappel règle IKEA : le ML bas doit inclure caissons bas + fileurs + vides inté
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script>
-const HTML_VERSION = "V7.23";
+const HTML_VERSION = "V7.24";
 const DEFAULT_ENGINE_VERSION = "V4.57-cloud-api-no-ocr";
 const DEFAULT_API_VERSION = "V1.42-secure";
 const CLOUD_API_ANALYZE_URL = "https://ikea-pdf-analyzer-pntpqiubqq-ew.a.run.app/analyze";
@@ -589,6 +623,10 @@ function setAuthMessage(message, type=""){
 function showAuthGate(show){
   const gate = $("authGate");
   if(gate) gate.classList.toggle("hidden", !show);
+}
+function showPortal(show){
+  const portal = $("portalGate");
+  if(portal) portal.classList.toggle("hidden", !show);
 }
 function licenseType(license){
   return String(license?.license_type || "").trim().toLowerCase();
@@ -743,11 +781,14 @@ function setLoggedUser(user, license){
     if(label) label.textContent = `${user.email || "Connecté"}${licenseText}`;
     label?.classList.remove("hidden");
     logout?.classList.remove("hidden");
+    $("portalBtn")?.classList.remove("hidden");
     applyLicenseMode(license || null);
   }else{
     if(label) label.textContent = "Non connecté";
     label?.classList.add("hidden");
     logout?.classList.add("hidden");
+    $("portalBtn")?.classList.add("hidden");
+    showPortal(false);
     applyLicenseMode(null);
   }
 }
@@ -1386,15 +1427,19 @@ window.addEventListener("afterprint", () => {
 $("loginBtn")?.addEventListener("click", loginWithEmail);
 $("loginPassword")?.addEventListener("keydown", e=>{ if(e.key === "Enter") loginWithEmail(); });
 $("logoutBtn")?.addEventListener("click", async ()=>{ await firebase.auth().signOut(); });
+$("portalBtn")?.addEventListener("click", ()=>showPortal(true));
+$("openDevisBtn")?.addEventListener("click", ()=>showPortal(false));
 firebase.auth().onAuthStateChanged(async user=>{
   if(user){
     setLoggedUser(user, currentLicense);
     showAuthGate(false);
     await refreshLicenseStatus();
+    showPortal(new URLSearchParams(location.search).get("open") !== "devis");
   }else{
     currentLicense = null;
     setLoggedUser(null, null);
     showAuthGate(true);
+    showPortal(false);
     setAuthMessage("Connecte-toi pour utiliser le générateur.");
   }
 });
