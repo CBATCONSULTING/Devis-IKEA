@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Générateur de devis IKEA V7.28 — portail enrichi -->
+<!-- Générateur de devis IKEA V7.29 — défilement du portail corrigé -->
 <html lang="fr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Outils Challenge Bat - Générateur devis IKEA - V7.28</title>
+<title>Outils Challenge Bat - Générateur devis IKEA - V7.29</title>
 <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="shortcut icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
@@ -185,8 +185,8 @@ input[readonly]{
 .auth-msg{font-size:13px;font-weight:800;margin-top:10px;min-height:18px;color:#b45309}
 .auth-msg.ok{color:#166534}
 .auth-msg.err{color:#b91c1c}
-.portal-gate{position:fixed;inset:0;z-index:999998;background:linear-gradient(135deg,#e8eef8,#f8fafc);display:flex;align-items:center;justify-content:center;padding:20px}
-.portal-card{width:min(820px,100%);background:#fff;border:1px solid #d5dce8;border-radius:24px;box-shadow:0 20px 60px rgba(15,23,42,.18);padding:28px}
+.portal-gate{position:fixed;inset:0;z-index:999998;background:linear-gradient(135deg,#e8eef8,#f8fafc);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;overscroll-behavior:contain}
+.portal-card{width:min(820px,100%);background:#fff;border:1px solid #d5dce8;border-radius:24px;box-shadow:0 20px 60px rgba(15,23,42,.18);padding:28px;margin:0 0 28px}
 .portal-card h2{font-size:26px;margin:0;color:#0f172a}
 .portal-card>p{color:#64748b;margin:8px 0 22px}
 .portal-tools{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -252,6 +252,7 @@ body.license-mode-ikea .metric-adjustments{display:none!important}
 /* V7.26 : logos Challenge Bat, IKEA et Extrabat intégrés au portail */
 /* V7.27 : logo CBAT Consulting intégré à la carte du générateur */
 /* V7.28 : quatre accès supplémentaires, dont le site Challenge Bat à onglets */
+/* V7.29 : défilement vertical complet du portail sur les petits écrans */
 
 </style>
 </head>
@@ -260,7 +261,7 @@ body.license-mode-ikea .metric-adjustments{display:none!important}
   <h1>Générateur devis cuisine IKEA</h1>
   <div class="header-actions">
     <button id="portalBtn" class="portal-nav-btn hidden" type="button">Outils</button>
-    <span id="appVersionBadge">V7.28 | API en attente | Moteur en attente</span>
+    <span id="appVersionBadge">V7.29 | API en attente | Moteur en attente</span>
     <div id="authUserLabel" class="auth-pill hidden">Non connecté</div>
     <button id="logoutBtn" class="logout-btn hidden" type="button">Déconnexion</button>
   </div>
