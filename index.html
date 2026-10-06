@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Générateur de devis IKEA V7.31 — taille du logo Centiro ajustée -->
+<!-- Générateur de devis IKEA V7.32 — indice arrondi sans électroménagers -->
 <html lang="fr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Outils Challenge Bat - Générateur devis IKEA - V7.31</title>
+<title>Outils Challenge Bat - Générateur devis IKEA - V7.32</title>
 <link rel="icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="shortcut icon" type="image/png" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
 <link rel="apple-touch-icon" href="https://static.wixstatic.com/media/9c09bd_2d39eb8925934f618a639cf548697767~mv2.png">
@@ -256,6 +256,7 @@ body.license-mode-ikea .metric-adjustments{display:none!important}
 /* V7.29 : défilement vertical complet du portail sur les petits écrans */
 /* V7.30 : logo Centiro intégré à sa carte */
 /* V7.31 : taille du logo Centiro harmonisée avec les autres cartes */
+/* V7.32 : indice arrondi calculé sans ajouter les électroménagers */
 
 </style>
 </head>
@@ -264,7 +265,7 @@ body.license-mode-ikea .metric-adjustments{display:none!important}
   <h1>Générateur devis cuisine IKEA</h1>
   <div class="header-actions">
     <button id="portalBtn" class="portal-nav-btn hidden" type="button">Outils</button>
-    <span id="appVersionBadge">V7.31 | API en attente | Moteur en attente</span>
+    <span id="appVersionBadge">V7.32 | API en attente | Moteur en attente</span>
     <div id="authUserLabel" class="auth-pill hidden">Non connecté</div>
     <button id="logoutBtn" class="logout-btn hidden" type="button">Déconnexion</button>
   </div>
@@ -1141,7 +1142,7 @@ function calcCarte(){
   const cabPrest = r2(nbCaissonsRaw/2);       // champ 39 = (12+15+18+21)/2
   const doorPrest = r2(doorQtyCalc/2);        // champ 41 = 31/2
   const indice = r2((cabPrest*2*45) + (planMl*75) + (doorPrest*30) + (effectiveAppliancesQty*15) + (wasteQty ? 120 : 0)); // champ 69
-  const indiceRounded = Math.ceil((cabPrest + doorPrest + effectiveAppliancesQty)/4); // champ 70
+  const indiceRounded = Math.ceil((cabPrest + doorPrest)/4); // champ 70 - V7.32 sans électroménagers
   return {caissonTtc,planMl,planTtc,doorActive,doorMissing,doorQtyCalc,doorMlCalc,doorTtc,effectiveAppliancesQty,effectiveSinkQty,appliancesTtc,wasteQty,wasteTtc,travelTtc,mainSubtotal,totalTtc,caisson,plan,door,appl,waste,travel,total,caissonRecup,planRecup,doorRecup,totalRecup,cabPrest,doorPrest,indice,indiceRounded};
 }
 function refreshComplete(){
@@ -1163,7 +1164,7 @@ function refreshComplete(){
   set("d_poseHt", money(c.poseHt)); set("d_poseTva", money(c.poseTva)); set("d_poseTtc", money(c.poseTtc)); set("d_poseRecup", money(c.poseRecup));
   set("d_planHt", c.planSpecial ? money(c.planHt) : "inclus"); set("d_planTva", c.planSpecial ? money(c.planTva) : "inclus"); set("d_planTtc", c.planSpecial ? money(c.planTtc) : "inclus"); set("d_planRecup", c.planSpecial ? money(c.planRecup) : "");
   set("d_totalHt", money(c.totalHt)); set("d_totalTva", money(c.totalTva)); set("d_totalTtc", money(c.totalTtc)); set("d_totalRecup", money(c.recup));
-  set("d_indicePose", ml(c.indice)); set("d_indicePoseRounded", Math.ceil((c.nbCaissons + c.effectiveAppliancesQty) / 4));
+  set("d_indicePose", ml(c.indice)); set("d_indicePoseRounded", Math.ceil(c.nbCaissons / 4)); // V7.32 sans électroménagers
   set("cc_date",d.date); set("cc_store",d.store); set("cc_clientName",d.clientName); set("cc_clientAddress",d.clientAddress); set("cc_clientPhone",d.clientPhone); set("cc_clientEmail",d.clientEmail);
   set("cc_totalHt", money(c.totalHt)); set("cc_totalTva", money(c.totalTva)); set("cc_totalTtc", money(c.totalTtc)); set("cc_totalRecup", money(c.recup));
   const redIds = ["d_planType","d_nerosteinLabel","d_nerosteinTtcShort","d_subtotalPlan","d_planHt","d_planTva","d_planTtc","d_planRecup"];
